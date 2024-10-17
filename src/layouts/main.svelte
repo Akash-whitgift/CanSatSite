@@ -153,8 +153,8 @@ for (const image of track.getElementsByClassName("image")) {
       <InstructionCard on:dismiss={dismissInstructions} />
     {/if}
   <div class="image-container" on:click={() => openModal('modal1')}>
-    <img class="image" src="/about.jpg" draggable="false" data-active />
-    <div class="text-overlay">About</div>
+    <img class="image" src="/d41586-024-02191-1_27293496.jpg" draggable="false" data-active />
+    <div class="text-overlay">Engineering</div>  <!-- Change title here -->
   </div>
   <div class="image-container" on:click={() => openModal('modal2')}>
     <img class="image" src="/Ad01.jpg" draggable="false" data-active />
