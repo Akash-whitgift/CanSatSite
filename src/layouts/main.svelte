@@ -158,19 +158,19 @@ for (const image of track.getElementsByClassName("image")) {
   </div>
   <div class="image-container" on:click={() => openModal('modal2')}>
     <img class="image" src="/Ad01.jpg" draggable="false" data-active />
-    <div class="text-overlay">Python</div>
+    <div class="text-overlay">Sample</div>
   </div>
   <div class="image-container " on:click={() => openModal('modal3')}>
     <img class="image darker" src="/HTML.webp" draggable="false" data-active />
-    <div class="text-overlay">HTML</div>
+    <div class="text-overlay">Sample</div>
   </div>
   <div class="image-container" on:click={() => openModal('modal4')}>
     <img class="image" src="/AiEmer.jpg" draggable="false" data-active />
-    <div class="text-overlay">AI/Emerging Technologies</div>
+    <div class="text-overlay">Sample</div>
   </div>
   <div class="image-container" on:click={() => openModal('modal5')}>
     <img class="image darker" src="/amazon.jpeg" draggable="false" data-active />
-    <div class="text-overlay">Amazon Technologies Project</div>
+    <div class="text-overlay">Sample</div>
   </div>
 </div>
 
