@@ -1,13 +1,21 @@
 <script>
-  import { onMount } from 'svelte';
-  import { scale } from 'svelte/transition';
+  import { onMount, onDestroy } from 'svelte';
+  import { tweened } from 'svelte/motion';
+  import { cubicOut } from 'svelte/easing';
   import  Toc from './Toc.svelte'
   export let id;
   export let onClose;
+  export let dimensions;
+
+  const size = tweened(
+    { width: dimensions.width, height: dimensions.height, top: dimensions.top, left: dimensions.left },
+    { duration: 2, easing: cubicOut }
+  );
 
   let content;
   let isClosing = false;
   let tocHtml = '';
+  let modalElement;
   const modalsData = {
     modal1: {
       title: 'Engineering',
@@ -61,22 +69,40 @@
   };
 
   onMount(() => {
-    content = modalsData[id].content;
-    tocHtml = generateTOC(content);
+    // Start at the image size
+    modalElement.style.width = `${dimensions.width}px`;
+    modalElement.style.height = `${dimensions.height}px`;
+    modalElement.style.top = `${dimensions.top}px`;
+    modalElement.style.left = `${dimensions.left}px`;
+    // Animate to full screen after a short delay
+    setTimeout(() => {
+      size.set({ width: window.innerWidth, height: window.innerHeight, top: 0, left: 0 });
+    }, 50);
+    window.addEventListener('resize', handleResize);
   });
 
+  onDestroy(() => {
+  // Remove resize event listener
+  window.removeEventListener('resize', handleResize);
+  });
   function handleClose() {
     isClosing = true;
-    setTimeout(() => {
-      if (typeof onClose === 'function') {
-        onClose();
-      }
-      isClosing = false;
-    }, 1); // Matches the duration of the fade-out transition
+    // Animate back to original size
+    size.set({ width: dimensions.width, height: dimensions.height, top: dimensions.top, left: dimensions.left })
+      .then(() => {
+        if (typeof onClose === 'function') {
+          onClose();
+        }
+        isClosing = false;
+      });
   }
 
 
-
+  function handleResize() {
+  if (modalElement) {
+    size.set({ width: window.innerWidth, height: window.innerHeight, top: 0, left: 0 });
+  }
+}
 
 
 function generateTOC(content) {
@@ -110,30 +136,39 @@ function scrollToSection(id) {
 
 
 </script>
-
-<div class="modal {isClosing ? 'scale-out' : 'scale-in'}" id={id} 
-     transition:scale={{ duration: 300, start: 0.5 }}>
-  <div class='container'>
-  <span class="close" id='closecross' on:click={handleClose}>&times;</span>
-  <img class="modal-image" src={modalsData[id].image} />
-  
-  <div class="modal-text">
-    <h1>{modalsData[id].title}</h1>
-    <div class="toc">
-      <Toc class='toc'> </Toc>
-      </div>
-    <div class="content-container">
-<hr>
-      <div class="content">
-        {@html content}
+<div class="modal-overlay" class:fade-out={isClosing} on:click={handleClose}></div>
+<div
+  bind:this={modalElement}
+  class="modal"
+  class:fade-out={isClosing}
+  id={id}
+  style="width: {$size.width}px; height: {$size.height}px; top: {$size.top}px; left: {$size.left}px;"
+>
+  <div class="modal-image"></div>
+  <div class='modal-content'>
+    <span class="close" id='closecross' on:click={handleClose}>&times;</span>
+    <div class="modal-text">
+      <h1>{modalsData[id].title}</h1>
+      <div class="content-container">
+        <hr>
+        <div class="content">
+          {@html modalsData[id].content}
+        </div>
       </div>
     </div>
-  </div>
   </div>
 </div>
 
 <style>
-
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
   .modal {
     display: block;
     position: fixed;
@@ -149,6 +184,10 @@ function scrollToSection(id) {
     opacity: 1;
     transform-origin: center center;
     transition: opacity 0.3s ease, transform 0.3s ease;
+    position: fixed;
+    background: white;
+    z-index: 1000;
+    transition: all 0.3s ease;
     
   }
   .scale-in {
@@ -173,17 +212,13 @@ function scrollToSection(id) {
     opacity: 0;
   }
   .modal-image {
-    display: block;
-    margin: 0 auto;
-    width: 110%;
-    height: 110vh;
-  object-fit: cover;
-  --webkit-user-select: none;
-  user-select: none;
-  -webkit-user-drag: none;
-  transform: translateX(-2.5%);
-  transform: translateY(-10%);
-  overflow: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #000000;
+    z-index: 0;
   }
 
   .close {

@@ -16,17 +16,26 @@
   let dragSensitivity = 0.01;
   let scrollSensitivity = 0.2;
 let isMobile = false;
+let modalDimensions = null;
   const isBrowser = typeof window !== 'undefined';
 
   function dismissInstructions() {
     localStorage.setItem('instructionsDismissed', 'true');
     showInstructions = false;
   }
-  function openModal(modalId) {
-    isModalOpen = true;
-    currentModalId = modalId;
-    goto(`#${modalId}`, { replaceState: true });
-  }
+  function openModal(modalId, event) {
+  const container = event.currentTarget;
+  const rect = container.getBoundingClientRect();
+  isModalOpen = true;
+  currentModalId = modalId;
+  modalDimensions = {
+    width: rect.width,
+    height: rect.height,
+    top: rect.top,
+    left: rect.left
+  };
+  goto(`#${modalId}`, { replaceState: true });
+}
 
   function closeModal() {
     isModalOpen = false;
@@ -152,23 +161,23 @@ for (const image of track.getElementsByClassName("image")) {
 
       <InstructionCard on:dismiss={dismissInstructions} />
     {/if}
-  <div class="image-container" on:click={() => openModal('modal1')}>
+  <div class="image-container" on:click={(event) => openModal('modal1', event)}>
     <img class="image" src="/d41586-024-02191-1_27293496.jpg" draggable="false" data-active />
     <div class="text-overlay">Engineering</div>  <!-- Change title here -->
   </div>
-  <div class="image-container" on:click={() => openModal('modal2')}>
+  <div class="image-container" on:click={(event) => openModal('modal2', event)}>
     <img class="image" src="/Ad01.jpg" draggable="false" data-active />
     <div class="text-overlay">Sample</div>
   </div>
-  <div class="image-container " on:click={() => openModal('modal3')}>
+  <div class="image-container " on:click={(event) => openModal('modal3', event)}>
     <img class="image darker" src="/HTML.webp" draggable="false" data-active />
     <div class="text-overlay">Sample</div>
   </div>
-  <div class="image-container" on:click={() => openModal('modal4')}>
+  <div class="image-container" on:click={(event) => openModal('modal4', event)}>
     <img class="image" src="/AiEmer.jpg" draggable="false" data-active />
     <div class="text-overlay">Sample</div>
   </div>
-  <div class="image-container" on:click={() => openModal('modal5')}>
+  <div class="image-container" on:click={(event) => openModal('modal5', event)}>
     <img class="image darker" src="/amazon.jpeg" draggable="false" data-active />
     <div class="text-overlay">Sample</div>
   </div>
@@ -183,5 +192,5 @@ for (const image of track.getElementsByClassName("image")) {
   }
   </style>
 {#if isModalOpen}
-<Modal id={currentModalId} onClose={closeModal} />
+<Modal id={currentModalId} onClose={closeModal} dimensions={modalDimensions} />
 {/if}

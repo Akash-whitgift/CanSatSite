@@ -31,7 +31,6 @@ body {
     object-fit: fill;
     height:100%;
     width:100%;
-    filter: blur(8px) brightness(50%);
   }
   .content-image {
     border-radius: 0px;
