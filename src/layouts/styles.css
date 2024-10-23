@@ -99,7 +99,7 @@ body {
   /* Desktop Styles */
     #image-track {
       display: flex;
-      gap: 5vmin;
+      gap: 60px; /* 5vmin */
       position: absolute;
       left: 50%;
       top: 50%;
@@ -109,9 +109,10 @@ body {
     }
 
     .image-container {
-      width: 60vmin;
+      width: 60vmin; /* 60 and 76 */
       height: 76vmin;
       position: relative;
+      transition: 300ms ease-in-out;
     }
 
     .image {
@@ -127,8 +128,13 @@ body {
     }
     .image-container:hover > .image {
       filter: brightness(60%);
-      transition: filter 0.3s ease;
+      transition: filter 0.3s ease-in-out;
       cursor: pointer;
+    }
+
+    .image-container:hover {
+      scale: 1.05;
+      transition: 300ms ease;
     }
     .text-overlay {
       position: absolute;

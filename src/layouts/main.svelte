@@ -184,12 +184,14 @@ for (const image of track.getElementsByClassName("image")) {
 </div>
 
 <style>
+
   .text-overlay {
     overflow: hidden;
   }
   .darker {
     filter: brightness(0.7);
   }
+
   </style>
 {#if isModalOpen}
 <Modal id={currentModalId} onClose={closeModal} dimensions={modalDimensions} />
