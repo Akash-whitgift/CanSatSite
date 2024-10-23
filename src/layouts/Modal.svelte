@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { fade } from 'svelte/transition';
+  import { scale } from 'svelte/transition';
   import  Toc from './Toc.svelte'
   export let id;
   export let onClose;
@@ -111,7 +111,8 @@ function scrollToSection(id) {
 
 </script>
 
-<div class="modal {isClosing ? 'fade-out' : 'fade-in'}" id={id} transition:fade={{ duration: 300 }}>
+<div class="modal {isClosing ? 'scale-out' : 'scale-in'}" id={id} 
+     transition:scale={{ duration: 300, start: 0.5 }}>
   <div class='container'>
   <span class="close" id='closecross' on:click={handleClose}>&times;</span>
   <img class="modal-image" src={modalsData[id].image} />
@@ -146,7 +147,17 @@ function scrollToSection(id) {
     overflow-y: hidden;
     background-color: rgba(0, 0, 0, 0.4);
     opacity: 1;
-    transition: opacity 0.3s ease;
+    transform-origin: center center;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    
+  }
+  .scale-in {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .scale-out {
+    opacity: 0;
+    transform: scale(0.5);
   }
   .container {
     overflow: visible;
