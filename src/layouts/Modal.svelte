@@ -20,7 +20,19 @@
     modal1: {
       title: 'Engineering',
       content: `
-      <p>Engineering page</p>
+      <section>
+        <h2> The Design Process</h2>
+        <p> Our Design Process consists of 5 stages: </p>
+        <ol>
+          <li> Research </li>
+          <li> Design </li>
+          <li> Prototype </li>
+          <li> Test </li>
+          <li> Launch </li>
+        </ol>
+      </section>
+      
+
 <style>
   a {
     color:white;
@@ -148,6 +160,11 @@ function scrollToSection(id) {
   <div class='modal-content'>
     <span class="close" id='closecross' on:click={handleClose}>&times;</span>
     <div class="modal-text">
+      {#if modalsData[id].image}
+      <div class="cover-image-container">
+        <img src={modalsData[id].image} alt={modalsData[id].title} class='cover-image' />
+      </div>
+      {/if}
       <h1>{modalsData[id].title}</h1>
       <div class="content-container">
         <hr>
@@ -168,6 +185,24 @@ function scrollToSection(id) {
     height: 100%;
     background: rgba(0, 0, 0, 0.5);
     z-index: 999;
+  }
+  .cover-image-container {
+  position: relative;
+  width: 100%;
+  height: 300px; /* Adjust height as needed */
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+  .modal-content {
+    display: flex;
+    justify-content: center;
   }
   .modal {
     display: block;
@@ -237,14 +272,15 @@ function scrollToSection(id) {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(20, 20, 20, 0.8);
+    /* background-color: rgba(20, 20, 20, 0.8); */
     padding: 20px;
     border-radius: 10px;
     text-align: Left;
-    width: 80%;
-    height: 80%;
+    width: 100%;
+    height: 100%;
     color: white;
     overflow-y: scroll;
+    margin: 10px;
   }
   h1 {
     font-size: 3.5em;
