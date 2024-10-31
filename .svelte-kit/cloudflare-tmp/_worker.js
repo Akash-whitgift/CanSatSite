@@ -1,6 +1,6 @@
 // src/worker.js
 import { Server } from "../output/server/index.js";
-import { manifest, prerendered, app_path } from "./manifest.js";
+import { manifest, prerendered, base_path } from "./manifest.js";
 
 // ../../node_modules/.pnpm/worktop@0.8.0-next.18/node_modules/worktop/cache/index.mjs
 async function e(e3, t2) {
@@ -14,18 +14,15 @@ function t(e3, t2, n2, o2) {
 }
 var n = /* @__PURE__ */ new Set([200, 203, 204, 300, 301, 404, 405, 410, 414, 501]);
 function r(e3) {
-  if (!n.has(e3.status))
-    return false;
-  if (~(e3.headers.get("Vary") || "").indexOf("*"))
-    return false;
+  if (!n.has(e3.status)) return false;
+  if (~(e3.headers.get("Vary") || "").indexOf("*")) return false;
   let t2 = e3.headers.get("Cache-Control") || "";
   return !/(private|no-cache|no-store)/i.test(t2);
 }
 function o(n2) {
   return async function(r3, o2) {
     let a = await e(n2, r3);
-    if (a)
-      return a;
+    if (a) return a;
     o2.defer((e3) => {
       t(n2, r3, e3, o2);
     });
@@ -40,15 +37,15 @@ var e2 = o.bind(0, s);
 
 // src/worker.js
 var server = new Server(manifest);
-var immutable = `/${app_path}/immutable/`;
-var version_file = `/${app_path}/version.json`;
+var app_path = `/${manifest.appPath}`;
+var immutable = `${app_path}/immutable/`;
+var version_file = `${app_path}/version.json`;
 var worker = {
   async fetch(req, env, context) {
     await server.init({ env });
     let pragma = req.headers.get("cache-control") || "";
     let res = !pragma.includes("no-cache") && await r2(req);
-    if (res)
-      return res;
+    if (res) return res;
     let { pathname, search } = new URL(req.url);
     try {
       pathname = decodeURIComponent(pathname);
@@ -56,16 +53,15 @@ var worker = {
     }
     const stripped_pathname = pathname.replace(/\/$/, "");
     let is_static_asset = false;
-    const filename = stripped_pathname.substring(1);
+    const filename = stripped_pathname.slice(base_path.length + 1);
     if (filename) {
-      is_static_asset = manifest.assets.has(filename) || manifest.assets.has(filename + "/index.html");
+      is_static_asset = manifest.assets.has(filename) || manifest.assets.has(filename + "/index.html") || filename in manifest._.server_assets || filename + "/index.html" in manifest._.server_assets;
     }
     let location = pathname.at(-1) === "/" ? stripped_pathname : pathname + "/";
     if (is_static_asset || prerendered.has(pathname) || pathname === version_file || pathname.startsWith(immutable)) {
       res = await env.ASSETS.fetch(req);
     } else if (location && prerendered.has(location)) {
-      if (search)
-        location += search;
+      if (search) location += search;
       res = new Response("", {
         status: 308,
         headers: {

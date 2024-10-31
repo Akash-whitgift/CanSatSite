@@ -34,6 +34,13 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 // .svelte-kit/output/server/chunks/ssr.js
 function noop() {
 }
+function assign(tar, src) {
+  for (const k in src) tar[k] = src[k];
+  return (
+    /** @type {T & S} */
+    tar
+  );
+}
 function run(fn) {
   return fn();
 }
@@ -63,8 +70,7 @@ function set_current_component(component4) {
   current_component = component4;
 }
 function get_current_component() {
-  if (!current_component)
-    throw new Error("Function called outside component initialization");
+  if (!current_component) throw new Error("Function called outside component initialization");
   return current_component;
 }
 function onDestroy(fn) {
@@ -96,67 +102,6 @@ function setContext(key2, context) {
 function getContext(key2) {
   return get_current_component().$$.context.get(key2);
 }
-function ensure_array_like(array_like_or_iterator) {
-  return array_like_or_iterator?.length !== void 0 ? array_like_or_iterator : Array.from(array_like_or_iterator);
-}
-function spread(args, attrs_to_add) {
-  const attributes = Object.assign({}, ...args);
-  if (attrs_to_add) {
-    const classes_to_add = attrs_to_add.classes;
-    const styles_to_add = attrs_to_add.styles;
-    if (classes_to_add) {
-      if (attributes.class == null) {
-        attributes.class = classes_to_add;
-      } else {
-        attributes.class += " " + classes_to_add;
-      }
-    }
-    if (styles_to_add) {
-      if (attributes.style == null) {
-        attributes.style = style_object_to_string(styles_to_add);
-      } else {
-        attributes.style = style_object_to_string(
-          merge_ssr_styles(attributes.style, styles_to_add)
-        );
-      }
-    }
-  }
-  let str = "";
-  Object.keys(attributes).forEach((name) => {
-    if (invalid_attribute_name_character.test(name))
-      return;
-    const value = attributes[name];
-    if (value === true)
-      str += " " + name;
-    else if (boolean_attributes.has(name.toLowerCase())) {
-      if (value)
-        str += " " + name;
-    } else if (value != null) {
-      str += ` ${name}="${value}"`;
-    }
-  });
-  return str;
-}
-function merge_ssr_styles(style_attribute, style_directive) {
-  const style_object = {};
-  for (const individual_style of style_attribute.split(";")) {
-    const colon_index = individual_style.indexOf(":");
-    const name = individual_style.slice(0, colon_index).trim();
-    const value = individual_style.slice(colon_index + 1).trim();
-    if (!name)
-      continue;
-    style_object[name] = value;
-  }
-  for (const name in style_directive) {
-    const value = style_directive[name];
-    if (value) {
-      style_object[name] = value;
-    } else {
-      delete style_object[name];
-    }
-  }
-  return style_object;
-}
 function escape(value, is_attr = false) {
   const str = String(value);
   const pattern2 = is_attr ? ATTR_REGEX : CONTENT_REGEX;
@@ -171,29 +116,9 @@ function escape(value, is_attr = false) {
   }
   return escaped2 + str.substring(last);
 }
-function escape_attribute_value(value) {
-  const should_escape = typeof value === "string" || value && typeof value === "object";
-  return should_escape ? escape(value, true) : value;
-}
-function escape_object(obj) {
-  const result = {};
-  for (const key2 in obj) {
-    result[key2] = escape_attribute_value(obj[key2]);
-  }
-  return result;
-}
-function each(items, fn) {
-  items = ensure_array_like(items);
-  let str = "";
-  for (let i = 0; i < items.length; i += 1) {
-    str += fn(items[i], i);
-  }
-  return str;
-}
 function validate_component(component4, name) {
   if (!component4 || !component4.$$render) {
-    if (name === "svelte:component")
-      name += " this={...}";
+    if (name === "svelte:component") name += " this={...}";
     throw new Error(
       `<${name}> is not a valid SSR component. You may need to review your build config to ensure that dependencies are compiled, rather than imported as pre-compiled modules. Otherwise you may need to fix a <${name}>.`
     );
@@ -237,52 +162,15 @@ function create_ssr_component(fn) {
   };
 }
 function add_attribute(name, value, boolean) {
-  if (value == null || boolean)
-    return "";
+  if (value == null || boolean) return "";
   const assignment = `="${escape(value, true)}"`;
   return ` ${name}${assignment}`;
 }
-function style_object_to_string(style_object) {
-  return Object.keys(style_object).filter((key2) => style_object[key2] != null && style_object[key2] !== "").map((key2) => `${key2}: ${escape_attribute_value(style_object[key2])};`).join(" ");
-}
-function add_styles(style_object) {
-  const styles = style_object_to_string(style_object);
-  return styles ? ` style="${styles}"` : "";
-}
-var current_component, _boolean_attributes, boolean_attributes, invalid_attribute_name_character, ATTR_REGEX, CONTENT_REGEX, missing_component, on_destroy;
+var identity, current_component, ATTR_REGEX, CONTENT_REGEX, missing_component, on_destroy;
 var init_ssr = __esm({
   ".svelte-kit/output/server/chunks/ssr.js"() {
-    _boolean_attributes = /** @type {const} */
-    [
-      "allowfullscreen",
-      "allowpaymentrequest",
-      "async",
-      "autofocus",
-      "autoplay",
-      "checked",
-      "controls",
-      "default",
-      "defer",
-      "disabled",
-      "formnovalidate",
-      "hidden",
-      "inert",
-      "ismap",
-      "loop",
-      "multiple",
-      "muted",
-      "nomodule",
-      "novalidate",
-      "open",
-      "playsinline",
-      "readonly",
-      "required",
-      "reversed",
-      "selected"
-    ];
-    boolean_attributes = /* @__PURE__ */ new Set([..._boolean_attributes]);
-    invalid_attribute_name_character = /[\s'">/=\u{FDD0}-\u{FDEF}\u{FFFE}\u{FFFF}\u{1FFFE}\u{1FFFF}\u{2FFFE}\u{2FFFF}\u{3FFFE}\u{3FFFF}\u{4FFFE}\u{4FFFF}\u{5FFFE}\u{5FFFF}\u{6FFFE}\u{6FFFF}\u{7FFFE}\u{7FFFF}\u{8FFFE}\u{8FFFF}\u{9FFFE}\u{9FFFF}\u{AFFFE}\u{AFFFF}\u{BFFFE}\u{BFFFF}\u{CFFFE}\u{CFFFF}\u{DFFFE}\u{DFFFF}\u{EFFFE}\u{EFFFF}\u{FFFFE}\u{FFFFF}\u{10FFFE}\u{10FFFF}]/u;
-    ATTR_REGEX = /[&"]/g;
+    identity = (x) => x;
+    ATTR_REGEX = /[&"<]/g;
     CONTENT_REGEX = /[&<]/g;
     missing_component = {
       $$render: () => ""
@@ -292,15 +180,13 @@ var init_ssr = __esm({
 
 // .svelte-kit/output/server/chunks/exports.js
 function resolve(base2, path) {
-  if (path[0] === "/" && path[1] === "/")
-    return path;
+  if (path[0] === "/" && path[1] === "/") return path;
   let url = new URL(base2, internal);
   url = new URL(path, url);
   return url.protocol === internal.protocol ? url.pathname + url.search + url.hash : url.href;
 }
 function normalize_path(path, trailing_slash) {
-  if (path === "/" || trailing_slash === "ignore")
-    return path;
+  if (path === "/" || trailing_slash === "ignore") return path;
   if (trailing_slash === "never") {
     return path.endsWith("/") ? path.slice(0, -1) : path;
   } else if (trailing_slash === "always" && !path.endsWith("/")) {
@@ -350,6 +236,9 @@ function make_trackable(url, callback, search_params_callback) {
     tracked[Symbol.for("nodejs.util.inspect.custom")] = (depth, opts, inspect) => {
       return inspect(url, opts);
     };
+    tracked.searchParams[Symbol.for("nodejs.util.inspect.custom")] = (depth, opts, inspect) => {
+      return inspect(url.searchParams, opts);
+    };
   }
   {
     disable_hash(tracked);
@@ -387,8 +276,7 @@ function has_data_suffix(pathname) {
   return pathname.endsWith(DATA_SUFFIX) || pathname.endsWith(HTML_DATA_SUFFIX);
 }
 function add_data_suffix(pathname) {
-  if (pathname.endsWith(".html"))
-    return pathname.replace(/\.html$/, HTML_DATA_SUFFIX);
+  if (pathname.endsWith(".html")) return pathname.replace(/\.html$/, HTML_DATA_SUFFIX);
   return pathname.replace(/\/$/, "") + DATA_SUFFIX;
 }
 function strip_data_suffix(pathname) {
@@ -399,11 +287,9 @@ function strip_data_suffix(pathname) {
 }
 function validator(expected) {
   function validate(module, file) {
-    if (!module)
-      return;
+    if (!module) return;
     for (const key2 in module) {
-      if (key2[0] === "_" || expected.has(key2))
-        continue;
+      if (key2[0] === "_" || expected.has(key2)) continue;
       const values = [...expected.values()];
       const hint = hint_for_supported_files(key2, file?.slice(file.lastIndexOf("."))) ?? `valid exports are ${values.join(", ")}, or anything with a '_' prefix`;
       throw new Error(`Invalid export '${key2}'${file ? ` in ${file}` : ""} (${hint})`);
@@ -479,503 +365,58 @@ var init_exports = __esm({
   }
 });
 
-// node_modules/devalue/src/utils.js
-function is_primitive(thing) {
-  return Object(thing) !== thing;
+// .svelte-kit/output/server/chunks/index.js
+function readable(value, start) {
+  return {
+    subscribe: writable(value, start).subscribe
+  };
 }
-function is_plain_object(thing) {
-  const proto = Object.getPrototypeOf(thing);
-  return proto === Object.prototype || proto === null || Object.getOwnPropertyNames(proto).sort().join("\0") === object_proto_names;
-}
-function get_type(thing) {
-  return Object.prototype.toString.call(thing).slice(8, -1);
-}
-function get_escaped_char(char) {
-  switch (char) {
-    case '"':
-      return '\\"';
-    case "<":
-      return "\\u003C";
-    case "\\":
-      return "\\\\";
-    case "\n":
-      return "\\n";
-    case "\r":
-      return "\\r";
-    case "	":
-      return "\\t";
-    case "\b":
-      return "\\b";
-    case "\f":
-      return "\\f";
-    case "\u2028":
-      return "\\u2028";
-    case "\u2029":
-      return "\\u2029";
-    default:
-      return char < " " ? `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}` : "";
-  }
-}
-function stringify_string(str) {
-  let result = "";
-  let last_pos = 0;
-  const len = str.length;
-  for (let i = 0; i < len; i += 1) {
-    const char = str[i];
-    const replacement = get_escaped_char(char);
-    if (replacement) {
-      result += str.slice(last_pos, i) + replacement;
-      last_pos = i + 1;
-    }
-  }
-  return `"${last_pos === 0 ? str : result + str.slice(last_pos)}"`;
-}
-function enumerable_symbols(object) {
-  return Object.getOwnPropertySymbols(object).filter(
-    (symbol) => Object.getOwnPropertyDescriptor(object, symbol).enumerable
-  );
-}
-var escaped, DevalueError, object_proto_names;
-var init_utils = __esm({
-  "node_modules/devalue/src/utils.js"() {
-    escaped = {
-      "<": "\\u003C",
-      "\\": "\\\\",
-      "\b": "\\b",
-      "\f": "\\f",
-      "\n": "\\n",
-      "\r": "\\r",
-      "	": "\\t",
-      "\u2028": "\\u2028",
-      "\u2029": "\\u2029"
-    };
-    DevalueError = class extends Error {
-      /**
-       * @param {string} message
-       * @param {string[]} keys
-       */
-      constructor(message, keys) {
-        super(message);
-        this.name = "DevalueError";
-        this.path = keys.join("");
-      }
-    };
-    object_proto_names = /* @__PURE__ */ Object.getOwnPropertyNames(
-      Object.prototype
-    ).sort().join("\0");
-  }
-});
-
-// node_modules/devalue/src/uneval.js
-function uneval(value, replacer) {
-  const counts = /* @__PURE__ */ new Map();
-  const keys = [];
-  const custom = /* @__PURE__ */ new Map();
-  function walk(thing) {
-    if (typeof thing === "function") {
-      throw new DevalueError(`Cannot stringify a function`, keys);
-    }
-    if (!is_primitive(thing)) {
-      if (counts.has(thing)) {
-        counts.set(thing, counts.get(thing) + 1);
-        return;
-      }
-      counts.set(thing, 1);
-      if (replacer) {
-        const str2 = replacer(thing);
-        if (typeof str2 === "string") {
-          custom.set(thing, str2);
-          return;
+function writable(value, start = noop) {
+  let stop;
+  const subscribers = /* @__PURE__ */ new Set();
+  function set(new_value) {
+    if (safe_not_equal(value, new_value)) {
+      value = new_value;
+      if (stop) {
+        const run_queue = !subscriber_queue.length;
+        for (const subscriber of subscribers) {
+          subscriber[1]();
+          subscriber_queue.push(subscriber, value);
+        }
+        if (run_queue) {
+          for (let i = 0; i < subscriber_queue.length; i += 2) {
+            subscriber_queue[i][0](subscriber_queue[i + 1]);
+          }
+          subscriber_queue.length = 0;
         }
       }
-      const type = get_type(thing);
-      switch (type) {
-        case "Number":
-        case "BigInt":
-        case "String":
-        case "Boolean":
-        case "Date":
-        case "RegExp":
-          return;
-        case "Array":
-          thing.forEach((value2, i) => {
-            keys.push(`[${i}]`);
-            walk(value2);
-            keys.pop();
-          });
-          break;
-        case "Set":
-          Array.from(thing).forEach(walk);
-          break;
-        case "Map":
-          for (const [key2, value2] of thing) {
-            keys.push(
-              `.get(${is_primitive(key2) ? stringify_primitive(key2) : "..."})`
-            );
-            walk(value2);
-            keys.pop();
-          }
-          break;
-        default:
-          if (!is_plain_object(thing)) {
-            throw new DevalueError(
-              `Cannot stringify arbitrary non-POJOs`,
-              keys
-            );
-          }
-          if (enumerable_symbols(thing).length > 0) {
-            throw new DevalueError(
-              `Cannot stringify POJOs with symbolic keys`,
-              keys
-            );
-          }
-          for (const key2 in thing) {
-            keys.push(`.${key2}`);
-            walk(thing[key2]);
-            keys.pop();
-          }
+    }
+  }
+  function update(fn) {
+    set(fn(value));
+  }
+  function subscribe2(run2, invalidate = noop) {
+    const subscriber = [run2, invalidate];
+    subscribers.add(subscriber);
+    if (subscribers.size === 1) {
+      stop = start(set, update) || noop;
+    }
+    run2(value);
+    return () => {
+      subscribers.delete(subscriber);
+      if (subscribers.size === 0 && stop) {
+        stop();
+        stop = null;
       }
-    }
+    };
   }
-  walk(value);
-  const names = /* @__PURE__ */ new Map();
-  Array.from(counts).filter((entry) => entry[1] > 1).sort((a, b) => b[1] - a[1]).forEach((entry, i) => {
-    names.set(entry[0], get_name(i));
-  });
-  function stringify2(thing) {
-    if (names.has(thing)) {
-      return names.get(thing);
-    }
-    if (is_primitive(thing)) {
-      return stringify_primitive(thing);
-    }
-    if (custom.has(thing)) {
-      return custom.get(thing);
-    }
-    const type = get_type(thing);
-    switch (type) {
-      case "Number":
-      case "String":
-      case "Boolean":
-        return `Object(${stringify2(thing.valueOf())})`;
-      case "RegExp":
-        return `new RegExp(${stringify_string(thing.source)}, "${thing.flags}")`;
-      case "Date":
-        return `new Date(${thing.getTime()})`;
-      case "Array":
-        const members = (
-          /** @type {any[]} */
-          thing.map(
-            (v, i) => i in thing ? stringify2(v) : ""
-          )
-        );
-        const tail = thing.length === 0 || thing.length - 1 in thing ? "" : ",";
-        return `[${members.join(",")}${tail}]`;
-      case "Set":
-      case "Map":
-        return `new ${type}([${Array.from(thing).map(stringify2).join(",")}])`;
-      default:
-        const obj = `{${Object.keys(thing).map((key2) => `${safe_key(key2)}:${stringify2(thing[key2])}`).join(",")}}`;
-        const proto = Object.getPrototypeOf(thing);
-        if (proto === null) {
-          return Object.keys(thing).length > 0 ? `Object.assign(Object.create(null),${obj})` : `Object.create(null)`;
-        }
-        return obj;
-    }
-  }
-  const str = stringify2(value);
-  if (names.size) {
-    const params = [];
-    const statements = [];
-    const values = [];
-    names.forEach((name, thing) => {
-      params.push(name);
-      if (custom.has(thing)) {
-        values.push(
-          /** @type {string} */
-          custom.get(thing)
-        );
-        return;
-      }
-      if (is_primitive(thing)) {
-        values.push(stringify_primitive(thing));
-        return;
-      }
-      const type = get_type(thing);
-      switch (type) {
-        case "Number":
-        case "String":
-        case "Boolean":
-          values.push(`Object(${stringify2(thing.valueOf())})`);
-          break;
-        case "RegExp":
-          values.push(thing.toString());
-          break;
-        case "Date":
-          values.push(`new Date(${thing.getTime()})`);
-          break;
-        case "Array":
-          values.push(`Array(${thing.length})`);
-          thing.forEach((v, i) => {
-            statements.push(`${name}[${i}]=${stringify2(v)}`);
-          });
-          break;
-        case "Set":
-          values.push(`new Set`);
-          statements.push(
-            `${name}.${Array.from(thing).map((v) => `add(${stringify2(v)})`).join(".")}`
-          );
-          break;
-        case "Map":
-          values.push(`new Map`);
-          statements.push(
-            `${name}.${Array.from(thing).map(([k, v]) => `set(${stringify2(k)}, ${stringify2(v)})`).join(".")}`
-          );
-          break;
-        default:
-          values.push(
-            Object.getPrototypeOf(thing) === null ? "Object.create(null)" : "{}"
-          );
-          Object.keys(thing).forEach((key2) => {
-            statements.push(
-              `${name}${safe_prop(key2)}=${stringify2(thing[key2])}`
-            );
-          });
-      }
-    });
-    statements.push(`return ${str}`);
-    return `(function(${params.join(",")}){${statements.join(
-      ";"
-    )}}(${values.join(",")}))`;
-  } else {
-    return str;
-  }
+  return { set, update, subscribe: subscribe2 };
 }
-function get_name(num) {
-  let name = "";
-  do {
-    name = chars[num % chars.length] + name;
-    num = ~~(num / chars.length) - 1;
-  } while (num >= 0);
-  return reserved.test(name) ? `${name}0` : name;
-}
-function escape_unsafe_char(c2) {
-  return escaped[c2] || c2;
-}
-function escape_unsafe_chars(str) {
-  return str.replace(unsafe_chars, escape_unsafe_char);
-}
-function safe_key(key2) {
-  return /^[_$a-zA-Z][_$a-zA-Z0-9]*$/.test(key2) ? key2 : escape_unsafe_chars(JSON.stringify(key2));
-}
-function safe_prop(key2) {
-  return /^[_$a-zA-Z][_$a-zA-Z0-9]*$/.test(key2) ? `.${key2}` : `[${escape_unsafe_chars(JSON.stringify(key2))}]`;
-}
-function stringify_primitive(thing) {
-  if (typeof thing === "string")
-    return stringify_string(thing);
-  if (thing === void 0)
-    return "void 0";
-  if (thing === 0 && 1 / thing < 0)
-    return "-0";
-  const str = String(thing);
-  if (typeof thing === "number")
-    return str.replace(/^(-)?0\./, "$1.");
-  if (typeof thing === "bigint")
-    return thing + "n";
-  return str;
-}
-var chars, unsafe_chars, reserved;
-var init_uneval = __esm({
-  "node_modules/devalue/src/uneval.js"() {
-    init_utils();
-    chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$";
-    unsafe_chars = /[<\b\f\n\r\t\0\u2028\u2029]/g;
-    reserved = /^(?:do|if|in|for|int|let|new|try|var|byte|case|char|else|enum|goto|long|this|void|with|await|break|catch|class|const|final|float|short|super|throw|while|yield|delete|double|export|import|native|return|switch|throws|typeof|boolean|default|extends|finally|package|private|abstract|continue|debugger|function|volatile|interface|protected|transient|implements|instanceof|synchronized)$/;
-  }
-});
-
-// node_modules/devalue/src/constants.js
-var UNDEFINED, HOLE, NAN, POSITIVE_INFINITY, NEGATIVE_INFINITY, NEGATIVE_ZERO;
-var init_constants = __esm({
-  "node_modules/devalue/src/constants.js"() {
-    UNDEFINED = -1;
-    HOLE = -2;
-    NAN = -3;
-    POSITIVE_INFINITY = -4;
-    NEGATIVE_INFINITY = -5;
-    NEGATIVE_ZERO = -6;
-  }
-});
-
-// node_modules/devalue/src/parse.js
-var init_parse = __esm({
-  "node_modules/devalue/src/parse.js"() {
-    init_constants();
-  }
-});
-
-// node_modules/devalue/src/stringify.js
-function stringify(value, reducers) {
-  const stringified = [];
-  const indexes = /* @__PURE__ */ new Map();
-  const custom = [];
-  for (const key2 in reducers) {
-    custom.push({ key: key2, fn: reducers[key2] });
-  }
-  const keys = [];
-  let p = 0;
-  function flatten(thing) {
-    if (typeof thing === "function") {
-      throw new DevalueError(`Cannot stringify a function`, keys);
-    }
-    if (indexes.has(thing))
-      return indexes.get(thing);
-    if (thing === void 0)
-      return UNDEFINED;
-    if (Number.isNaN(thing))
-      return NAN;
-    if (thing === Infinity)
-      return POSITIVE_INFINITY;
-    if (thing === -Infinity)
-      return NEGATIVE_INFINITY;
-    if (thing === 0 && 1 / thing < 0)
-      return NEGATIVE_ZERO;
-    const index5 = p++;
-    indexes.set(thing, index5);
-    for (const { key: key2, fn } of custom) {
-      const value2 = fn(thing);
-      if (value2) {
-        stringified[index5] = `["${key2}",${flatten(value2)}]`;
-        return index5;
-      }
-    }
-    let str = "";
-    if (is_primitive(thing)) {
-      str = stringify_primitive2(thing);
-    } else {
-      const type = get_type(thing);
-      switch (type) {
-        case "Number":
-        case "String":
-        case "Boolean":
-          str = `["Object",${stringify_primitive2(thing)}]`;
-          break;
-        case "BigInt":
-          str = `["BigInt",${thing}]`;
-          break;
-        case "Date":
-          const valid = !isNaN(thing.getDate());
-          str = `["Date","${valid ? thing.toISOString() : ""}"]`;
-          break;
-        case "RegExp":
-          const { source, flags } = thing;
-          str = flags ? `["RegExp",${stringify_string(source)},"${flags}"]` : `["RegExp",${stringify_string(source)}]`;
-          break;
-        case "Array":
-          str = "[";
-          for (let i = 0; i < thing.length; i += 1) {
-            if (i > 0)
-              str += ",";
-            if (i in thing) {
-              keys.push(`[${i}]`);
-              str += flatten(thing[i]);
-              keys.pop();
-            } else {
-              str += HOLE;
-            }
-          }
-          str += "]";
-          break;
-        case "Set":
-          str = '["Set"';
-          for (const value2 of thing) {
-            str += `,${flatten(value2)}`;
-          }
-          str += "]";
-          break;
-        case "Map":
-          str = '["Map"';
-          for (const [key2, value2] of thing) {
-            keys.push(
-              `.get(${is_primitive(key2) ? stringify_primitive2(key2) : "..."})`
-            );
-            str += `,${flatten(key2)},${flatten(value2)}`;
-            keys.pop();
-          }
-          str += "]";
-          break;
-        default:
-          if (!is_plain_object(thing)) {
-            throw new DevalueError(
-              `Cannot stringify arbitrary non-POJOs`,
-              keys
-            );
-          }
-          if (enumerable_symbols(thing).length > 0) {
-            throw new DevalueError(
-              `Cannot stringify POJOs with symbolic keys`,
-              keys
-            );
-          }
-          if (Object.getPrototypeOf(thing) === null) {
-            str = '["null"';
-            for (const key2 in thing) {
-              keys.push(`.${key2}`);
-              str += `,${stringify_string(key2)},${flatten(thing[key2])}`;
-              keys.pop();
-            }
-            str += "]";
-          } else {
-            str = "{";
-            let started = false;
-            for (const key2 in thing) {
-              if (started)
-                str += ",";
-              started = true;
-              keys.push(`.${key2}`);
-              str += `${stringify_string(key2)}:${flatten(thing[key2])}`;
-              keys.pop();
-            }
-            str += "}";
-          }
-      }
-    }
-    stringified[index5] = str;
-    return index5;
-  }
-  const index4 = flatten(value);
-  if (index4 < 0)
-    return `${index4}`;
-  return `[${stringified.join(",")}]`;
-}
-function stringify_primitive2(thing) {
-  const type = typeof thing;
-  if (type === "string")
-    return stringify_string(thing);
-  if (thing instanceof String)
-    return stringify_string(thing.toString());
-  if (thing === void 0)
-    return UNDEFINED.toString();
-  if (thing === 0 && 1 / thing < 0)
-    return NEGATIVE_ZERO.toString();
-  if (type === "bigint")
-    return `["BigInt","${thing}"]`;
-  return String(thing);
-}
-var init_stringify = __esm({
-  "node_modules/devalue/src/stringify.js"() {
-    init_utils();
-    init_constants();
-  }
-});
-
-// node_modules/devalue/index.js
-var init_devalue = __esm({
-  "node_modules/devalue/index.js"() {
-    init_uneval();
-    init_parse();
-    init_stringify();
+var subscriber_queue;
+var init_chunks = __esm({
+  ".svelte-kit/output/server/chunks/index.js"() {
+    init_ssr();
+    subscriber_queue = [];
   }
 });
 
@@ -983,11 +424,11 @@ var init_devalue = __esm({
 var require_cookie = __commonJS({
   "node_modules/cookie/index.js"(exports) {
     "use strict";
-    exports.parse = parse3;
+    exports.parse = parse2;
     exports.serialize = serialize2;
     var __toString = Object.prototype.toString;
     var fieldContentRegExp = /^[\u0009\u0020-\u007e\u0080-\u00ff]+$/;
-    function parse3(str, options2) {
+    function parse2(str, options2) {
       if (typeof str !== "string") {
         throw new TypeError("argument str must be a string");
       }
@@ -1187,7 +628,7 @@ var require_set_cookie = __commonJS({
       }
       return { name, value };
     }
-    function parse3(input, options2) {
+    function parse2(input, options2) {
       options2 = options2 ? Object.assign({}, defaultParseOptions, options2) : defaultParseOptions;
       if (!input) {
         if (!options2.map) {
@@ -1285,8 +726,8 @@ var require_set_cookie = __commonJS({
       }
       return cookiesStrings;
     }
-    module.exports = parse3;
-    module.exports.parse = parse3;
+    module.exports = parse2;
+    module.exports.parse = parse2;
     module.exports.parseString = parseString2;
     module.exports.splitCookiesString = splitCookiesString2;
   }
@@ -1321,16 +762,16 @@ var init__ = __esm({
   ".svelte-kit/output/server/nodes/0.js"() {
     index = 0;
     component = async () => component_cache ??= (await Promise.resolve().then(() => (init_layout_svelte(), layout_svelte_exports))).default;
-    imports = ["_app/immutable/nodes/0.Dn_LOdW3.js", "_app/immutable/chunks/scheduler.5rEqcWWW.js", "_app/immutable/chunks/index.3m18Cu60.js"];
+    imports = ["_app/immutable/nodes/0.UtFmvbLQ.js", "_app/immutable/chunks/scheduler.DTurKcvQ.js", "_app/immutable/chunks/index.CvJRIlCB.js"];
     stylesheets = [];
     fonts = [];
   }
 });
 
 // .svelte-kit/output/server/chunks/client.js
-function get(key2, parse3 = JSON.parse) {
+function get(key2, parse2 = JSON.parse) {
   try {
-    return parse3(sessionStorage[key2]);
+    return parse2(sessionStorage[key2]);
   } catch {
   }
 }
@@ -1343,7 +784,6 @@ var SNAPSHOT_KEY, SCROLL_KEY;
 var init_client = __esm({
   ".svelte-kit/output/server/chunks/client.js"() {
     init_exports();
-    init_devalue();
     SNAPSHOT_KEY = "sveltekit:snapshot";
     SCROLL_KEY = "sveltekit:scroll";
     get(SCROLL_KEY) ?? {};
@@ -1405,7 +845,7 @@ var init__2 = __esm({
   ".svelte-kit/output/server/nodes/1.js"() {
     index2 = 1;
     component2 = async () => component_cache2 ??= (await Promise.resolve().then(() => (init_error_svelte(), error_svelte_exports))).default;
-    imports2 = ["_app/immutable/nodes/1.DRbh7SrI.js", "_app/immutable/chunks/scheduler.5rEqcWWW.js", "_app/immutable/chunks/index.3m18Cu60.js", "_app/immutable/chunks/entry.xbmA0_Ly.js"];
+    imports2 = ["_app/immutable/nodes/1.B_Fl4tyl.js", "_app/immutable/chunks/scheduler.DTurKcvQ.js", "_app/immutable/chunks/index.CvJRIlCB.js", "_app/immutable/chunks/entry.Xyt3Gdu4.js"];
     stylesheets2 = [];
     fonts2 = [];
   }
@@ -1416,179 +856,176 @@ var page_svelte_exports = {};
 __export(page_svelte_exports, {
   default: () => Page
 });
-function is_void(name) {
-  return void_element_names.test(name) || name.toLowerCase() === "!doctype";
+function run_tasks(now2) {
+  tasks.forEach((task) => {
+    if (!task.c(now2)) {
+      tasks.delete(task);
+      task.f();
+    }
+  });
+  if (tasks.size !== 0) raf(run_tasks);
 }
-var void_element_names, MenuIcon, css$3, Toc, css$2, Modal, css$1, InstructionCard, css, dragSensitivity, scrollSensitivity, Main, Page;
+function loop(callback) {
+  let task;
+  if (tasks.size === 0) raf(run_tasks);
+  return {
+    promise: new Promise((fulfill) => {
+      tasks.add(task = { c: callback, f: fulfill });
+    }),
+    abort() {
+      tasks.delete(task);
+    }
+  };
+}
+function is_date(obj) {
+  return Object.prototype.toString.call(obj) === "[object Date]";
+}
+function cubicOut(t2) {
+  const f = t2 - 1;
+  return f * f * f + 1;
+}
+function get_interpolator(a, b) {
+  if (a === b || a !== a) return () => a;
+  const type = typeof a;
+  if (type !== typeof b || Array.isArray(a) !== Array.isArray(b)) {
+    throw new Error("Cannot interpolate values of different type");
+  }
+  if (Array.isArray(a)) {
+    const arr = b.map((bi, i) => {
+      return get_interpolator(a[i], bi);
+    });
+    return (t2) => arr.map((fn) => fn(t2));
+  }
+  if (type === "object") {
+    if (!a || !b) throw new Error("Object cannot be null");
+    if (is_date(a) && is_date(b)) {
+      a = a.getTime();
+      b = b.getTime();
+      const delta = b - a;
+      return (t2) => new Date(a + t2 * delta);
+    }
+    const keys = Object.keys(b);
+    const interpolators = {};
+    keys.forEach((key2) => {
+      interpolators[key2] = get_interpolator(a[key2], b[key2]);
+    });
+    return (t2) => {
+      const result = {};
+      keys.forEach((key2) => {
+        result[key2] = interpolators[key2](t2);
+      });
+      return result;
+    };
+  }
+  if (type === "number") {
+    const delta = b - a;
+    return (t2) => a + t2 * delta;
+  }
+  throw new Error(`Cannot interpolate ${type} values`);
+}
+function tweened(value, defaults = {}) {
+  const store = writable(value);
+  let task;
+  let target_value = value;
+  function set(new_value, opts) {
+    if (value == null) {
+      store.set(value = new_value);
+      return Promise.resolve();
+    }
+    target_value = new_value;
+    let previous_task = task;
+    let started = false;
+    let {
+      delay = 0,
+      duration = 400,
+      easing = identity,
+      interpolate = get_interpolator
+    } = assign(assign({}, defaults), opts);
+    if (duration === 0) {
+      if (previous_task) {
+        previous_task.abort();
+        previous_task = null;
+      }
+      store.set(value = target_value);
+      return Promise.resolve();
+    }
+    const start = now() + delay;
+    let fn;
+    task = loop((now2) => {
+      if (now2 < start) return true;
+      if (!started) {
+        fn = interpolate(value, new_value);
+        if (typeof duration === "function") duration = duration(value, new_value);
+        started = true;
+      }
+      if (previous_task) {
+        previous_task.abort();
+        previous_task = null;
+      }
+      const elapsed = now2 - start;
+      if (elapsed > /** @type {number} */
+      duration) {
+        store.set(value = new_value);
+        return false;
+      }
+      store.set(value = fn(easing(elapsed / duration)));
+      return true;
+    });
+    return task.promise;
+  }
+  return {
+    set,
+    update: (fn, opts) => set(fn(target_value, value), opts),
+    subscribe: store.subscribe
+  };
+}
+var is_client, now, raf, tasks, css$2, Modal, css$1, InstructionCard, css, dragSensitivity, scrollSensitivity, Main, Page;
 var init_page_svelte = __esm({
   ".svelte-kit/output/server/entries/pages/_page.svelte.js"() {
     init_ssr();
     init_client();
-    void_element_names = /^(?:area|base|br|col|command|embed|hr|img|input|keygen|link|meta|param|source|track|wbr)$/;
-    MenuIcon = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      return ` <svg${spread([escape_object($$props), { viewBox: "0 0 20 20" }, { fill: "currentColor" }], {})}><path d="M3 5a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1zm0 5a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1zm0 5a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1z"></path></svg>`;
-    });
-    css$3 = {
-      code: ".svelte-j30iej:where(aside.toc){box-sizing:border-box;height:max-content;overflow-wrap:break-word;font-size:var(--toc-font-size);min-width:var(--toc-min-width);width:var(--toc-width);z-index:var(--toc-z-index, 1)}.svelte-j30iej:where(aside.toc > nav){overflow:var(--toc-overflow, auto);overscroll-behavior:contain;max-height:var(--toc-max-height, 90vh);padding:var(--toc-padding, 1em 1em 0)}.svelte-j30iej:where(aside.toc > nav > ol){list-style:var(--toc-ol-list-style, none);padding:var(--toc-ol-padding, 0);margin:var(--toc-ol-margin)}.svelte-j30iej:where(.toc-title){padding:var(--toc-title-padding);margin:var(--toc-title-margin)}.svelte-j30iej:where(aside.toc > nav > ol > li){cursor:pointer;color:var(--toc-li-color);border:var(--toc-li-border);border-radius:var(--toc-li-border-radius);margin:var(--toc-li-margin);padding:var(--toc-li-padding, 2pt 4pt)}.svelte-j30iej:where(aside.toc > nav > ol > li:hover){color:var(--toc-li-hover-color, cornflowerblue);background:var(--toc-li-hover-bg)}.svelte-j30iej:where(aside.toc > nav > ol > li.active){background:var(--toc-active-bg, cornflowerblue);color:var(--toc-active-color, white);font-weight:var(--toc-active-font-weight);border:var(--toc-active-border);border-width:var(--toc-active-border-width);border-radius:var(--toc-active-border-radius, 2pt)}.svelte-j30iej:where(aside.toc > button){border:none;bottom:0;cursor:pointer;font-size:2em;line-height:0;position:absolute;right:0;z-index:2;padding:var(--toc-mobile-btn-padding, 2pt 3pt);border-radius:var(--toc-mobile-btn-border-radius, 4pt);background:var(--toc-mobile-btn-bg, rgba(255, 255, 255, 0.2));color:var(--toc-mobile-btn-color, black)}.svelte-j30iej:where(aside.toc > nav){position:relative}.svelte-j30iej:where(aside.toc > nav > .toc-title){margin-top:0}.svelte-j30iej:where(aside.toc.mobile){visibility:hidden;position:absolute;bottom:var(--toc-mobile-bottom, 1em);right:var(--toc-mobile-right, 1em)}.svelte-j30iej:where(aside.toc.mobile > nav){border-radius:3pt;right:0;z-index:-1;box-sizing:border-box;background:var(--toc-mobile-bg, #444);width:var(--toc-mobile-width, 18em);box-shadow:var(--toc-mobile-shadow);border:var(--toc-mobile-border)}.svelte-j30iej:where(aside.toc.desktop){margin:var(--toc-desktop-aside-margin)}.svelte-j30iej:where(aside.toc.desktop){position:sticky;background:#444;margin:var(--toc-desktop-nav-margin);max-width:var(--toc-desktop-max-width);top:var(--toc-desktop-sticky-top, 2em);border-radius:8px;padding:4px}",
-      map: '{"version":3,"file":"Toc.svelte","sources":["Toc.svelte"],"sourcesContent":["\\n<script>\\n// prebuilt TOC component from Sveltekit\\nimport { createEventDispatcher, onMount } from \'svelte\';\\n    import { blur } from \'svelte/transition\';\\n    import { MenuIcon } from \'.\';\\n    export let activeHeading = null;\\n    export let activeHeadingScrollOffset = 100;\\n    export let activeTocLi = null;\\n    export let aside = undefined;\\n    export let breakpoint = 1000; // in pixels (smaller window width is considered mobile, larger is desktop)\\n    export let desktop = true;\\n    export let flashClickedHeadingsFor = 1500;\\n    export let getHeadingIds = (node) => node.id;\\n    export let getHeadingLevels = (node) => Number(node.nodeName[1]); // get the number from H1, H2, ...\\n    export let getHeadingTitles = (node) => node.textContent ?? ``;\\n    // the result of document.querySelectorAll(headingSelector). can be useful for binding\\n    export let headings = [];\\n    export let headingSelector = `:is(h2, h3, h4):not(.toc-exclude)`;\\n    export let hide = false;\\n    export let autoHide = true;\\n    export let keepActiveTocItemInView = true; // requires scrollend event browser support\\n    export let minItems = 0;\\n    export let nav = undefined;\\n    export let open = false;\\n    export let openButtonLabel = `Open table of contents`;\\n    // prettier-ignore\\n    export let reactToKeys = [`ArrowDown`, `ArrowUp`, ` `, `Enter`, `Escape`, `Tab`];\\n    export let pageBody = `body`;\\n    export let scrollBehavior = `smooth`;\\n    export let title = `On this page`;\\n    export let titleTag = `h2`;\\n    export let tocItems = [];\\n    export let warnOnEmpty = true;\\n    export let blurParams = { duration: 200 };\\n    let window_width;\\n    // dispatch open event when open changes\\n    const dispatch = createEventDispatcher();\\n    $: dispatch(`open`, { open });\\n    $: levels = headings.map(getHeadingLevels);\\n    $: minLevel = Math.min(...levels);\\n    $: desktop = window_width > breakpoint;\\n    function close(event) {\\n        if (!aside?.contains(event.target))\\n            open = false;\\n    }\\n    // (re-)query headings on mount and on route changes\\n    function requery_headings() {\\n        if (typeof document === `undefined`)\\n            return; // for SSR\\n        headings = [...document.querySelectorAll(headingSelector)];\\n        set_active_heading();\\n        if (headings.length === 0) {\\n            if (warnOnEmpty) {\\n                console.warn(`svelte-toc found no headings for headingSelector=\'${headingSelector}\'. ${autoHide ? `Hiding` : `Showing empty`} table of contents.`);\\n            }\\n            if (autoHide)\\n                hide = true;\\n        }\\n        else if (hide && autoHide) {\\n            hide = false;\\n        }\\n    }\\n    requery_headings();\\n    onMount(() => {\\n        if (typeof pageBody === `string`) {\\n            pageBody = document.querySelector(pageBody);\\n            if (!pageBody) {\\n                throw new Error(`Could not find page body element: ${pageBody}`);\\n            }\\n        }\\n        const mutation_observer = new MutationObserver(requery_headings);\\n        mutation_observer.observe(pageBody, { childList: true, subtree: true });\\n        return () => mutation_observer.disconnect();\\n    });\\n    function set_active_heading() {\\n        let idx = headings.length;\\n        while (idx--) {\\n            const { top } = headings[idx].getBoundingClientRect();\\n            // loop through headings from last to first until we find one that the viewport already\\n            // scrolled past. if none is found, set make first heading active\\n            if (top < activeHeadingScrollOffset || idx === 0) {\\n                activeHeading = headings[idx];\\n                activeTocLi = tocItems[idx];\\n                return; // exit while loop if updated active heading\\n            }\\n        }\\n    }\\n    // click and key handler for ToC items that scrolls to the heading\\n    const li_click_key_handler = (node) => (event) => {\\n        if (event instanceof KeyboardEvent && ![`Enter`, ` `].includes(event.key))\\n            return;\\n        open = false;\\n        node.scrollIntoView?.({ behavior: scrollBehavior, block: `start` });\\n        const id = getHeadingIds && getHeadingIds(node);\\n        if (id)\\n            history.replaceState({}, ``, `#${id}`);\\n        if (flashClickedHeadingsFor) {\\n            node.classList.add(`toc-clicked`);\\n            setTimeout(() => node.classList.remove(`toc-clicked`), flashClickedHeadingsFor);\\n        }\\n    };\\n    function scroll_to_active_toc_item(behavior = `smooth`) {\\n        if (keepActiveTocItemInView && activeTocLi && nav) {\\n            // scroll the active ToC item into the middle of the ToC container\\n            const top = activeTocLi?.offsetTop - nav.offsetHeight / 2;\\n            nav?.scrollTo?.({ top, behavior });\\n        }\\n    }\\n    // ensure active ToC is in view when ToC opens on mobile\\n    $: if (open && nav) {\\n        set_active_heading();\\n        scroll_to_active_toc_item(`instant`);\\n    }\\n    // enable keyboard navigation\\n    function on_keydown(event) {\\n        if (!reactToKeys || !reactToKeys.includes(event.key))\\n            return;\\n        // `:hover`.at(-1) returns the most deeply nested hovered element\\n        const hovered = [...document.querySelectorAll(`:hover`)].at(-1);\\n        const toc_is_hovered = hovered && nav?.contains(hovered);\\n        if (\\n        // return early if ToC does not have focus\\n        (event.key === `Tab` && !nav?.contains(document.activeElement)) ||\\n            // ignore keyboard events when ToC is closed on mobile or when ToC is not currently hovered on desktop\\n            (!desktop && !open) ||\\n            (desktop && !toc_is_hovered))\\n            return;\\n        event.preventDefault();\\n        if (event.key === `Escape` && open)\\n            open = false;\\n        else if (event.key === `Tab` && !aside?.contains(document.activeElement))\\n            open = false;\\n        else if (activeTocLi) {\\n            if (event.key === `ArrowDown`) {\\n                const next = activeTocLi.nextElementSibling;\\n                if (next)\\n                    activeTocLi = next;\\n            }\\n            if (event.key === `ArrowUp`) {\\n                const prev = activeTocLi.previousElementSibling;\\n                if (prev)\\n                    activeTocLi = prev;\\n            }\\n            // update active heading\\n            activeHeading = headings[tocItems.indexOf(activeTocLi)];\\n        }\\n        if (activeTocLi && [` `, `Enter`].includes(event.key)) {\\n            activeHeading?.scrollIntoView({ behavior: `instant`, block: `start` });\\n        }\\n    }\\n    <\/script>\\n    \\n    <svelte:window\\n      bind:innerWidth={window_width}\\n      on:scroll={set_active_heading}\\n      on:click={close}\\n      on:scrollend={() => {\\n        // wait for scroll end since Chrome doesn\'t support multiple simultaneous scrolls,\\n        // smooth or otherwise (https://stackoverflow.com/a/63563437)\\n        scroll_to_active_toc_item()\\n      }}\\n      on:resize={() => {\\n        desktop = window_width > breakpoint\\n        set_active_heading()\\n      }}\\n      on:keydown={on_keydown}\\n    />\\n    \\n    <aside\\n      class=\\"toc\\"\\n      class:desktop\\n      class:hidden={hide}\\n      class:mobile={!desktop}\\n      bind:this={aside}\\n      hidden={hide}\\n      aria-hidden={hide}\\n    >\\n      {#if !open && !desktop && headings.length >= minItems}\\n        <button\\n          on:click|preventDefault|stopPropagation={() => (open = true)}\\n          aria-label={openButtonLabel}\\n        >\\n          <slot name=\\"open-toc-icon\\">\\n            <MenuIcon width=\\"1em\\" />\\n          </slot>\\n        </button>\\n      {/if}\\n      {#if open || (desktop && headings.length >= minItems)}\\n        <nav transition:blur={blurParams} bind:this={nav}>\\n          {#if title}\\n            <slot name=\\"title\\">\\n              <svelte:element this={titleTag} class=\\"toc-title toc-exclude\\">\\n                {title}\\n              </svelte:element>\\n            </slot>\\n          {/if}\\n          <ol>\\n            {#each headings as heading, idx}\\n              <li\\n                style:margin=\\"0 0 0 {levels[idx] - minLevel}em\\"\\n                style:font-size=\\"{2 - 0.2 * (levels[idx] - minLevel)}ex\\"\\n                class:active={activeTocLi === tocItems[idx]}\\n                on:click={li_click_key_handler(heading)}\\n                on:keyup={li_click_key_handler(heading)}\\n                bind:this={tocItems[idx]}\\n                role=\\"menuitem\\"\\n              >\\n                <slot name=\\"toc-item\\" {heading} {idx}>\\n                  {getHeadingTitles(heading)}\\n                </slot>\\n              </li>\\n            {/each}\\n          </ol>\\n        </nav>\\n      {/if}\\n    </aside>\\n    \\n    <style>\\n      :where(aside.toc) {\\n        box-sizing: border-box;\\n        height: max-content;\\n        overflow-wrap: break-word;\\n        font-size: var(--toc-font-size);\\n        min-width: var(--toc-min-width);\\n        width: var(--toc-width);\\n        z-index: var(--toc-z-index, 1);\\n      }\\n      :where(aside.toc > nav) {\\n        overflow: var(--toc-overflow, auto);\\n        overscroll-behavior: contain;\\n        max-height: var(--toc-max-height, 90vh);\\n        padding: var(--toc-padding, 1em 1em 0);\\n      }\\n      :where(aside.toc > nav > ol) {\\n        list-style: var(--toc-ol-list-style, none);\\n        padding: var(--toc-ol-padding, 0);\\n        margin: var(--toc-ol-margin);\\n      }\\n      :where(.toc-title) {\\n        padding: var(--toc-title-padding);\\n        margin: var(--toc-title-margin);\\n      }\\n      :where(aside.toc > nav > ol > li) {\\n        cursor: pointer;\\n        color: var(--toc-li-color);\\n        border: var(--toc-li-border);\\n        border-radius: var(--toc-li-border-radius);\\n        margin: var(--toc-li-margin);\\n        padding: var(--toc-li-padding, 2pt 4pt);\\n      }\\n      :where(aside.toc > nav > ol > li:hover) {\\n        color: var(--toc-li-hover-color, cornflowerblue);\\n        background: var(--toc-li-hover-bg);\\n      }\\n      :where(aside.toc > nav > ol > li.active) {\\n        background: var(--toc-active-bg, cornflowerblue);\\n        color: var(--toc-active-color, white);\\n        font-weight: var(--toc-active-font-weight);\\n        border: var(--toc-active-border);\\n        border-width: var(--toc-active-border-width);\\n        border-radius: var(--toc-active-border-radius, 2pt);\\n      }\\n      :where(aside.toc > button) {\\n        border: none;\\n        bottom: 0;\\n        cursor: pointer;\\n        font-size: 2em;\\n        line-height: 0;\\n        position: absolute;\\n        right: 0;\\n        z-index: 2;\\n        padding: var(--toc-mobile-btn-padding, 2pt 3pt);\\n        border-radius: var(--toc-mobile-btn-border-radius, 4pt);\\n        background: var(--toc-mobile-btn-bg, rgba(255, 255, 255, 0.2));\\n        color: var(--toc-mobile-btn-color, black);\\n      }\\n      :where(aside.toc > nav) {\\n        position: relative;\\n      }\\n      :where(aside.toc > nav > .toc-title) {\\n        margin-top: 0;\\n      }\\n    \\n      :where(aside.toc.mobile) {\\n        visibility: hidden;\\n        position: absolute;\\n        bottom: var(--toc-mobile-bottom, 1em);\\n        right: var(--toc-mobile-right, 1em);\\n      }\\n      :where(aside.toc.mobile > nav) {\\n        border-radius: 3pt;\\n        right: 0;\\n        z-index: -1;\\n        box-sizing: border-box;\\n        background: var(--toc-mobile-bg, #444);\\n        width: var(--toc-mobile-width, 18em);\\n        box-shadow: var(--toc-mobile-shadow);\\n        border: var(--toc-mobile-border);\\n      }\\n    \\n      :where(aside.toc.desktop) {\\n        margin: var(--toc-desktop-aside-margin);\\n      }\\n      :where(aside.toc.desktop) {\\n        position: sticky;\\n        background: #444;\\n        margin: var(--toc-desktop-nav-margin);\\n        max-width: var(--toc-desktop-max-width);\\n        top: var(--toc-desktop-sticky-top, 2em);\\n        border-radius: 8px;\\n        padding: 4px;\\n      }\\n    </style>\\n    "],"names":[],"mappings":"cA2NM,OAAO,KAAK,IAAI,CAAE,CAChB,UAAU,CAAE,UAAU,CACtB,MAAM,CAAE,WAAW,CACnB,aAAa,CAAE,UAAU,CACzB,SAAS,CAAE,IAAI,eAAe,CAAC,CAC/B,SAAS,CAAE,IAAI,eAAe,CAAC,CAC/B,KAAK,CAAE,IAAI,WAAW,CAAC,CACvB,OAAO,CAAE,IAAI,aAAa,CAAC,EAAE,CAC/B,eACA,OAAO,KAAK,IAAI,CAAC,CAAC,CAAC,GAAG,CAAE,CACtB,QAAQ,CAAE,IAAI,cAAc,CAAC,KAAK,CAAC,CACnC,mBAAmB,CAAE,OAAO,CAC5B,UAAU,CAAE,IAAI,gBAAgB,CAAC,KAAK,CAAC,CACvC,OAAO,CAAE,IAAI,aAAa,CAAC,UAAU,CACvC,eACA,OAAO,KAAK,IAAI,CAAC,CAAC,CAAC,GAAG,CAAC,CAAC,CAAC,EAAE,CAAE,CAC3B,UAAU,CAAE,IAAI,mBAAmB,CAAC,KAAK,CAAC,CAC1C,OAAO,CAAE,IAAI,gBAAgB,CAAC,EAAE,CAAC,CACjC,MAAM,CAAE,IAAI,eAAe,CAC7B,eACA,OAAO,UAAU,CAAE,CACjB,OAAO,CAAE,IAAI,mBAAmB,CAAC,CACjC,MAAM,CAAE,IAAI,kBAAkB,CAChC,eACA,OAAO,KAAK,IAAI,CAAC,CAAC,CAAC,GAAG,CAAC,CAAC,CAAC,EAAE,CAAC,CAAC,CAAC,EAAE,CAAE,CAChC,MAAM,CAAE,OAAO,CACf,KAAK,CAAE,IAAI,cAAc,CAAC,CAC1B,MAAM,CAAE,IAAI,eAAe,CAAC,CAC5B,aAAa,CAAE,IAAI,sBAAsB,CAAC,CAC1C,MAAM,CAAE,IAAI,eAAe,CAAC,CAC5B,OAAO,CAAE,IAAI,gBAAgB,CAAC,QAAQ,CACxC,eACA,OAAO,KAAK,IAAI,CAAC,CAAC,CAAC,GAAG,CAAC,CAAC,CAAC,EAAE,CAAC,CAAC,CAAC,EAAE,MAAM,CAAE,CACtC,KAAK,CAAE,IAAI,oBAAoB,CAAC,eAAe,CAAC,CAChD,UAAU,CAAE,IAAI,iBAAiB,CACnC,eACA,OAAO,KAAK,IAAI,CAAC,CAAC,CAAC,GAAG,CAAC,CAAC,CAAC,EAAE,CAAC,CAAC,CAAC,EAAE,OAAO,CAAE,CACvC,UAAU,CAAE,IAAI,eAAe,CAAC,eAAe,CAAC,CAChD,KAAK,CAAE,IAAI,kBAAkB,CAAC,MAAM,CAAC,CACrC,WAAW,CAAE,IAAI,wBAAwB,CAAC,CAC1C,MAAM,CAAE,IAAI,mBAAmB,CAAC,CAChC,YAAY,CAAE,IAAI,yBAAyB,CAAC,CAC5C,aAAa,CAAE,IAAI,0BAA0B,CAAC,IAAI,CACpD,eACA,OAAO,KAAK,IAAI,CAAC,CAAC,CAAC,MAAM,CAAE,CACzB,MAAM,CAAE,IAAI,CACZ,MAAM,CAAE,CAAC,CACT,MAAM,CAAE,OAAO,CACf,SAAS,CAAE,GAAG,CACd,WAAW,CAAE,CAAC,CACd,QAAQ,CAAE,QAAQ,CAClB,KAAK,CAAE,CAAC,CACR,OAAO,CAAE,CAAC,CACV,OAAO,CAAE,IAAI,wBAAwB,CAAC,QAAQ,CAAC,CAC/C,aAAa,CAAE,IAAI,8BAA8B,CAAC,IAAI,CAAC,CACvD,UAAU,CAAE,IAAI,mBAAmB,CAAC,yBAAyB,CAAC,CAC9D,KAAK,CAAE,IAAI,sBAAsB,CAAC,MAAM,CAC1C,eACA,OAAO,KAAK,IAAI,CAAC,CAAC,CAAC,GAAG,CAAE,CACtB,QAAQ,CAAE,QACZ,eACA,OAAO,KAAK,IAAI,CAAC,CAAC,CAAC,GAAG,CAAC,CAAC,CAAC,UAAU,CAAE,CACnC,UAAU,CAAE,CACd,eAEA,OAAO,KAAK,IAAI,OAAO,CAAE,CACvB,UAAU,CAAE,MAAM,CAClB,QAAQ,CAAE,QAAQ,CAClB,MAAM,CAAE,IAAI,mBAAmB,CAAC,IAAI,CAAC,CACrC,KAAK,CAAE,IAAI,kBAAkB,CAAC,IAAI,CACpC,eACA,OAAO,KAAK,IAAI,OAAO,CAAC,CAAC,CAAC,GAAG,CAAE,CAC7B,aAAa,CAAE,GAAG,CAClB,KAAK,CAAE,CAAC,CACR,OAAO,CAAE,EAAE,CACX,UAAU,CAAE,UAAU,CACtB,UAAU,CAAE,IAAI,eAAe,CAAC,KAAK,CAAC,CACtC,KAAK,CAAE,IAAI,kBAAkB,CAAC,KAAK,CAAC,CACpC,UAAU,CAAE,IAAI,mBAAmB,CAAC,CACpC,MAAM,CAAE,IAAI,mBAAmB,CACjC,eAEA,OAAO,KAAK,IAAI,QAAQ,CAAE,CACxB,MAAM,CAAE,IAAI,0BAA0B,CACxC,eACA,OAAO,KAAK,IAAI,QAAQ,CAAE,CACxB,QAAQ,CAAE,MAAM,CAChB,UAAU,CAAE,IAAI,CAChB,MAAM,CAAE,IAAI,wBAAwB,CAAC,CACrC,SAAS,CAAE,IAAI,uBAAuB,CAAC,CACvC,GAAG,CAAE,IAAI,wBAAwB,CAAC,IAAI,CAAC,CACvC,aAAa,CAAE,GAAG,CAClB,OAAO,CAAE,GACX"}'
-    };
-    Toc = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      let levels;
-      let minLevel;
-      let { activeHeading = null } = $$props;
-      let { activeHeadingScrollOffset = 100 } = $$props;
-      let { activeTocLi = null } = $$props;
-      let { aside = void 0 } = $$props;
-      let { breakpoint = 1e3 } = $$props;
-      let { desktop = true } = $$props;
-      let { flashClickedHeadingsFor = 1500 } = $$props;
-      let { getHeadingIds = (node) => node.id } = $$props;
-      let { getHeadingLevels = (node) => Number(node.nodeName[1]) } = $$props;
-      let { getHeadingTitles = (node) => node.textContent ?? `` } = $$props;
-      let { headings = [] } = $$props;
-      let { headingSelector = `:is(h2, h3, h4):not(.toc-exclude)` } = $$props;
-      let { hide = false } = $$props;
-      let { autoHide = true } = $$props;
-      let { keepActiveTocItemInView = true } = $$props;
-      let { minItems = 0 } = $$props;
-      let { nav = void 0 } = $$props;
-      let { open = false } = $$props;
-      let { openButtonLabel = `Open table of contents` } = $$props;
-      let { reactToKeys = [`ArrowDown`, `ArrowUp`, ` `, `Enter`, `Escape`, `Tab`] } = $$props;
-      let { pageBody = `body` } = $$props;
-      let { scrollBehavior = `smooth` } = $$props;
-      let { title = `On this page` } = $$props;
-      let { titleTag = `h2` } = $$props;
-      let { tocItems = [] } = $$props;
-      let { warnOnEmpty = true } = $$props;
-      let { blurParams = { duration: 200 } } = $$props;
-      let window_width;
-      const dispatch = createEventDispatcher();
-      function requery_headings() {
-        if (typeof document === `undefined`)
-          return;
-        headings = [...document.querySelectorAll(headingSelector)];
-        set_active_heading();
-        if (headings.length === 0) {
-          if (warnOnEmpty) {
-            console.warn(`svelte-toc found no headings for headingSelector='${headingSelector}'. ${autoHide ? `Hiding` : `Showing empty`} table of contents.`);
-          }
-          if (autoHide)
-            hide = true;
-        } else if (hide && autoHide) {
-          hide = false;
-        }
-      }
-      requery_headings();
-      function set_active_heading() {
-        let idx = headings.length;
-        while (idx--) {
-          const { top } = headings[idx].getBoundingClientRect();
-          if (top < activeHeadingScrollOffset || idx === 0) {
-            activeHeading = headings[idx];
-            activeTocLi = tocItems[idx];
-            return;
-          }
-        }
-      }
-      function scroll_to_active_toc_item(behavior = `smooth`) {
-        if (keepActiveTocItemInView && activeTocLi && nav) {
-          const top = activeTocLi?.offsetTop - nav.offsetHeight / 2;
-          nav?.scrollTo?.({ top, behavior });
-        }
-      }
-      if ($$props.activeHeading === void 0 && $$bindings.activeHeading && activeHeading !== void 0)
-        $$bindings.activeHeading(activeHeading);
-      if ($$props.activeHeadingScrollOffset === void 0 && $$bindings.activeHeadingScrollOffset && activeHeadingScrollOffset !== void 0)
-        $$bindings.activeHeadingScrollOffset(activeHeadingScrollOffset);
-      if ($$props.activeTocLi === void 0 && $$bindings.activeTocLi && activeTocLi !== void 0)
-        $$bindings.activeTocLi(activeTocLi);
-      if ($$props.aside === void 0 && $$bindings.aside && aside !== void 0)
-        $$bindings.aside(aside);
-      if ($$props.breakpoint === void 0 && $$bindings.breakpoint && breakpoint !== void 0)
-        $$bindings.breakpoint(breakpoint);
-      if ($$props.desktop === void 0 && $$bindings.desktop && desktop !== void 0)
-        $$bindings.desktop(desktop);
-      if ($$props.flashClickedHeadingsFor === void 0 && $$bindings.flashClickedHeadingsFor && flashClickedHeadingsFor !== void 0)
-        $$bindings.flashClickedHeadingsFor(flashClickedHeadingsFor);
-      if ($$props.getHeadingIds === void 0 && $$bindings.getHeadingIds && getHeadingIds !== void 0)
-        $$bindings.getHeadingIds(getHeadingIds);
-      if ($$props.getHeadingLevels === void 0 && $$bindings.getHeadingLevels && getHeadingLevels !== void 0)
-        $$bindings.getHeadingLevels(getHeadingLevels);
-      if ($$props.getHeadingTitles === void 0 && $$bindings.getHeadingTitles && getHeadingTitles !== void 0)
-        $$bindings.getHeadingTitles(getHeadingTitles);
-      if ($$props.headings === void 0 && $$bindings.headings && headings !== void 0)
-        $$bindings.headings(headings);
-      if ($$props.headingSelector === void 0 && $$bindings.headingSelector && headingSelector !== void 0)
-        $$bindings.headingSelector(headingSelector);
-      if ($$props.hide === void 0 && $$bindings.hide && hide !== void 0)
-        $$bindings.hide(hide);
-      if ($$props.autoHide === void 0 && $$bindings.autoHide && autoHide !== void 0)
-        $$bindings.autoHide(autoHide);
-      if ($$props.keepActiveTocItemInView === void 0 && $$bindings.keepActiveTocItemInView && keepActiveTocItemInView !== void 0)
-        $$bindings.keepActiveTocItemInView(keepActiveTocItemInView);
-      if ($$props.minItems === void 0 && $$bindings.minItems && minItems !== void 0)
-        $$bindings.minItems(minItems);
-      if ($$props.nav === void 0 && $$bindings.nav && nav !== void 0)
-        $$bindings.nav(nav);
-      if ($$props.open === void 0 && $$bindings.open && open !== void 0)
-        $$bindings.open(open);
-      if ($$props.openButtonLabel === void 0 && $$bindings.openButtonLabel && openButtonLabel !== void 0)
-        $$bindings.openButtonLabel(openButtonLabel);
-      if ($$props.reactToKeys === void 0 && $$bindings.reactToKeys && reactToKeys !== void 0)
-        $$bindings.reactToKeys(reactToKeys);
-      if ($$props.pageBody === void 0 && $$bindings.pageBody && pageBody !== void 0)
-        $$bindings.pageBody(pageBody);
-      if ($$props.scrollBehavior === void 0 && $$bindings.scrollBehavior && scrollBehavior !== void 0)
-        $$bindings.scrollBehavior(scrollBehavior);
-      if ($$props.title === void 0 && $$bindings.title && title !== void 0)
-        $$bindings.title(title);
-      if ($$props.titleTag === void 0 && $$bindings.titleTag && titleTag !== void 0)
-        $$bindings.titleTag(titleTag);
-      if ($$props.tocItems === void 0 && $$bindings.tocItems && tocItems !== void 0)
-        $$bindings.tocItems(tocItems);
-      if ($$props.warnOnEmpty === void 0 && $$bindings.warnOnEmpty && warnOnEmpty !== void 0)
-        $$bindings.warnOnEmpty(warnOnEmpty);
-      if ($$props.blurParams === void 0 && $$bindings.blurParams && blurParams !== void 0)
-        $$bindings.blurParams(blurParams);
-      $$result.css.add(css$3);
-      {
-        dispatch(`open`, { open });
-      }
-      levels = headings.map(getHeadingLevels);
-      minLevel = Math.min(...levels);
-      desktop = window_width > breakpoint;
-      {
-        if (open && nav) {
-          set_active_heading();
-          scroll_to_active_toc_item(`instant`);
-        }
-      }
-      return ` <aside class="${[
-        "toc svelte-j30iej",
-        (desktop ? "desktop" : "") + " " + (hide ? "hidden" : "") + " " + (!desktop ? "mobile" : "")
-      ].join(" ").trim()}" ${hide ? "hidden" : ""}${add_attribute("aria-hidden", hide, 0)}${add_attribute("this", aside, 0)}>${!open && !desktop && headings.length >= minItems ? `<button${add_attribute("aria-label", openButtonLabel, 0)} class="svelte-j30iej">${slots["open-toc-icon"] ? slots["open-toc-icon"]({}) : ` ${validate_component(MenuIcon, "MenuIcon").$$render($$result, { width: "1em" }, {}, {})} `}</button>` : ``} ${open || desktop && headings.length >= minItems ? `<nav class="svelte-j30iej"${add_attribute("this", nav, 0)}>${title ? `${slots.title ? slots.title({}) : ` ${((tag) => {
-        return tag ? `<${titleTag} class="toc-title toc-exclude svelte-j30iej">${is_void(tag) ? "" : `${escape(title)}`}${is_void(tag) ? "" : `</${tag}>`}` : "";
-      })(titleTag)} `}` : ``} <ol class="svelte-j30iej">${each(headings, (heading, idx) => {
-        return `<li role="menuitem" class="${["svelte-j30iej", activeTocLi === tocItems[idx] ? "active" : ""].join(" ").trim()}"${add_styles({
-          "margin": `0 0 0 ${levels[idx] - minLevel}em`,
-          "font-size": `${2 - 0.2 * (levels[idx] - minLevel)}ex`
-        })}${add_attribute("this", tocItems[idx], 0)}>${slots["toc-item"] ? slots["toc-item"]({ heading, idx }) : ` ${escape(getHeadingTitles(heading))} `} </li>`;
-      })}</ol></nav>` : ``} </aside>`;
-    });
+    init_chunks();
+    is_client = typeof window !== "undefined";
+    now = is_client ? () => window.performance.now() : () => Date.now();
+    raf = is_client ? (cb) => requestAnimationFrame(cb) : noop;
+    tasks = /* @__PURE__ */ new Set();
     css$2 = {
-      code: ".modal.svelte-181otsg{display:block;position:fixed;z-index:1;padding-top:60px;left:0;top:0;width:100%;height:100%;overflow:hidden;overflow-y:hidden;background-color:rgba(0, 0, 0, 0.4);opacity:1;transition:opacity 0.3s ease}.container.svelte-181otsg{overflow:visible;margin:0;padding:0;width:100%;height:100%}.fade-in.svelte-181otsg{opacity:1}.fade-out.svelte-181otsg{opacity:0}.modal-image.svelte-181otsg{display:block;margin:0 auto;width:110%;height:110vh;object-fit:cover;--webkit-user-select:none;user-select:none;-webkit-user-drag:none;transform:translateX(-2.5%);transform:translateY(-10%);overflow:hidden}.close.svelte-181otsg{color:#aaa;float:right;font-size:28px;font-weight:bold}.close.svelte-181otsg:hover,.close.svelte-181otsg:focus{text-decoration:none;cursor:pointer}.modal-text.svelte-181otsg{position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);background-color:rgba(20, 20, 20, 0.8);padding:20px;border-radius:10px;text-align:Left;width:80%;height:80%;color:white;overflow-y:scroll}h1.svelte-181otsg{font-size:3.5em;margin:5px}@media(max-width: 600px){h1.svelte-181otsg{font-size:2.5em}img.svelte-181otsg{width:100%;height:auto}}.modal-text.svelte-181otsg::-webkit-scrollbar{width:2px;border-radius:80%}.modal-text.svelte-181otsg::-webkit-scrollbar-track{background:#000000;width:0;visibility:hidden}.modal-text.svelte-181otsg::-webkit-scrollbar-thumb{background:#ffffff;border-radius:2px}.content-container.svelte-181otsg{flex:1;padding-right:20px;overflow-y:hidden}",
-      map: `{"version":3,"file":"Modal.svelte","sources":["Modal.svelte"],"sourcesContent":["<script>\\n  import { onMount } from 'svelte';\\n  import { fade } from 'svelte/transition';\\n  import  Toc from './Toc.svelte'\\n  export let id;\\n  export let onClose;\\n\\n  let content;\\n  let isClosing = false;\\n  let tocHtml = '';\\n  const modalsData = {\\n    modal1: {\\n      title: 'Engineering',\\n      content: \`\\n      <p>Engineering page</p>\\n<style>\\n  a {\\n    color:white;\\n    text-decoration: underline;\\n  }\\n  </style>\\n\\n\\n\\n      \`,\\n      image: \\"/d41586-024-02191-1_27293496.jpg\\"\\n    },\\n    modal2: {\\n      title: 'Sample',\\n      content: \`\\n      <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/Ad01.jpg\\"\\n    },\\n    modal3: {\\n      title: 'Sample',\\n      content: \`\\n\\n     <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/HTML.webp\\"\\n    },\\n    modal4: {\\n      title: 'Sample',\\n      content: \`\\n     <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/AiEmer.jpg\\"\\n    },\\n    modal5: {\\n      title: 'Sample',\\n      content: \`\\n      <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/amazon.jpeg\\"\\n    }\\n  };\\n\\n  onMount(() => {\\n    content = modalsData[id].content;\\n    tocHtml = generateTOC(content);\\n  });\\n\\n  function handleClose() {\\n    isClosing = true;\\n    setTimeout(() => {\\n      if (typeof onClose === 'function') {\\n        onClose();\\n      }\\n      isClosing = false;\\n    }, 1); // Matches the duration of the fade-out transition\\n  }\\n\\n\\n\\n\\n\\nfunction generateTOC(content) {\\n  const tempDiv = document.createElement('div');\\n  tempDiv.innerHTML = content;\\n  const headings = tempDiv.querySelectorAll('h2, h3');\\n   let tocHtml = '';\\n  headings.forEach((heading, index) => {\\n    const level = heading.tagName.toLowerCase();\\n    const text = heading.textContent;\\n    const id = \`section-\${index}\`; // Generate unique ID for each section\\n   heading.id = id; // Assign ID to the heading for linking\\n    const listItem = \`<li><a href=\\"#\${id}\\"><\${level}>\${text}</\${level}></a></li>\`;\\n    tocHtml += listItem;\\n  });\\n  return \`<ul>\${tocHtml}</ul>\`;\\n}\\n\\nfunction scrollToSection(id) {\\n  const section = document.getElementById(id);\\n    if (section) {\\n      section.scrollIntoView({ behavior: 'smooth' });\\n    }\\n}\\n\\n\\n\\n\\n\\n\\n\\n\\n<\/script>\\n\\n<div class=\\"modal {isClosing ? 'fade-out' : 'fade-in'}\\" id={id} transition:fade={{ duration: 300 }}>\\n  <div class='container'>\\n  <span class=\\"close\\" id='closecross' on:click={handleClose}>&times;</span>\\n  <img class=\\"modal-image\\" src={modalsData[id].image} />\\n  \\n  <div class=\\"modal-text\\">\\n    <h1>{modalsData[id].title}</h1>\\n    <div class=\\"toc\\">\\n      <Toc class='toc'> </Toc>\\n      </div>\\n    <div class=\\"content-container\\">\\n<hr>\\n      <div class=\\"content\\">\\n        {@html content}\\n      </div>\\n    </div>\\n  </div>\\n  </div>\\n</div>\\n\\n<style>\\n\\n  .modal {\\n    display: block;\\n    position: fixed;\\n    z-index: 1;\\n    padding-top: 60px;\\n    left: 0;\\n    top: 0;\\n    width: 100%;\\n    height: 100%;\\n    overflow: hidden;\\n    overflow-y: hidden;\\n    background-color: rgba(0, 0, 0, 0.4);\\n    opacity: 1;\\n    transition: opacity 0.3s ease;\\n  }\\n  .container {\\n    overflow: visible;\\n    margin: 0;\\n    padding: 0;\\n    width: 100%;\\n    height: 100%;\\n  }\\n  .fade-in {\\n    opacity: 1;\\n  }\\n  .fade-out {\\n    opacity: 0;\\n  }\\n  .modal-image {\\n    display: block;\\n    margin: 0 auto;\\n    width: 110%;\\n    height: 110vh;\\n  object-fit: cover;\\n  --webkit-user-select: none;\\n  user-select: none;\\n  -webkit-user-drag: none;\\n  transform: translateX(-2.5%);\\n  transform: translateY(-10%);\\n  overflow: hidden;\\n  }\\n\\n  .close {\\n    color: #aaa;\\n    float: right;\\n    font-size: 28px;\\n    font-weight: bold;\\n  }\\n  .close:hover,\\n  .close:focus {\\n    text-decoration: none;\\n    cursor: pointer;\\n  }\\n  .modal-text {\\n    position: absolute;\\n    top: 50%;\\n    left: 50%;\\n    transform: translate(-50%, -50%);\\n    background-color: rgba(20, 20, 20, 0.8);\\n    padding: 20px;\\n    border-radius: 10px;\\n    text-align: Left;\\n    width: 80%;\\n    height: 80%;\\n    color: white;\\n    overflow-y: scroll;\\n  }\\n  h1 {\\n    font-size: 3.5em;\\n    margin: 5px;\\n  }\\n  @media (max-width: 600px) {\\n  h1 {\\n    font-size:2.5em;\\n\\n  }\\n  img {\\n    width: 100%;\\n    height: auto;\\n  }\\n}\\n.modal-text::-webkit-scrollbar {\\nwidth: 2px;\\n  border-radius: 80%;\\n}\\n.modal-text::-webkit-scrollbar-track{\\nbackground: #000000;\\n  width:0;\\n  visibility: hidden;\\n}\\n.modal-text::-webkit-scrollbar-thumb {\\nbackground: #ffffff;\\nborder-radius: 2px;\\n}\\n\\n  .content-container {\\n    flex: 1;\\n    padding-right: 20px; /* Adjust spacing between TOC and content */\\n    overflow-y: hidden; /* Allow scrolling if content is too long */\\n  }\\n\\n\\n</style>\\n"],"names":[],"mappings":"AAuIE,qBAAO,CACL,OAAO,CAAE,KAAK,CACd,QAAQ,CAAE,KAAK,CACf,OAAO,CAAE,CAAC,CACV,WAAW,CAAE,IAAI,CACjB,IAAI,CAAE,CAAC,CACP,GAAG,CAAE,CAAC,CACN,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,QAAQ,CAAE,MAAM,CAChB,UAAU,CAAE,MAAM,CAClB,gBAAgB,CAAE,KAAK,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,GAAG,CAAC,CACpC,OAAO,CAAE,CAAC,CACV,UAAU,CAAE,OAAO,CAAC,IAAI,CAAC,IAC3B,CACA,yBAAW,CACT,QAAQ,CAAE,OAAO,CACjB,MAAM,CAAE,CAAC,CACT,OAAO,CAAE,CAAC,CACV,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IACV,CACA,uBAAS,CACP,OAAO,CAAE,CACX,CACA,wBAAU,CACR,OAAO,CAAE,CACX,CACA,2BAAa,CACX,OAAO,CAAE,KAAK,CACd,MAAM,CAAE,CAAC,CAAC,IAAI,CACd,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,KAAK,CACf,UAAU,CAAE,KAAK,CACjB,oBAAoB,CAAE,IAAI,CAC1B,WAAW,CAAE,IAAI,CACjB,iBAAiB,CAAE,IAAI,CACvB,SAAS,CAAE,WAAW,KAAK,CAAC,CAC5B,SAAS,CAAE,WAAW,IAAI,CAAC,CAC3B,QAAQ,CAAE,MACV,CAEA,qBAAO,CACL,KAAK,CAAE,IAAI,CACX,KAAK,CAAE,KAAK,CACZ,SAAS,CAAE,IAAI,CACf,WAAW,CAAE,IACf,CACA,qBAAM,MAAM,CACZ,qBAAM,MAAO,CACX,eAAe,CAAE,IAAI,CACrB,MAAM,CAAE,OACV,CACA,0BAAY,CACV,QAAQ,CAAE,QAAQ,CAClB,GAAG,CAAE,GAAG,CACR,IAAI,CAAE,GAAG,CACT,SAAS,CAAE,UAAU,IAAI,CAAC,CAAC,IAAI,CAAC,CAChC,gBAAgB,CAAE,KAAK,EAAE,CAAC,CAAC,EAAE,CAAC,CAAC,EAAE,CAAC,CAAC,GAAG,CAAC,CACvC,OAAO,CAAE,IAAI,CACb,aAAa,CAAE,IAAI,CACnB,UAAU,CAAE,IAAI,CAChB,KAAK,CAAE,GAAG,CACV,MAAM,CAAE,GAAG,CACX,KAAK,CAAE,KAAK,CACZ,UAAU,CAAE,MACd,CACA,iBAAG,CACD,SAAS,CAAE,KAAK,CAChB,MAAM,CAAE,GACV,CACA,MAAO,YAAY,KAAK,CAAE,CAC1B,iBAAG,CACD,UAAU,KAEZ,CACA,kBAAI,CACF,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IACV,CACF,CACA,0BAAW,mBAAoB,CAC/B,KAAK,CAAE,GAAG,CACR,aAAa,CAAE,GACjB,CACA,0BAAW,yBAAyB,CACpC,UAAU,CAAE,OAAO,CACjB,MAAM,CAAC,CACP,UAAU,CAAE,MACd,CACA,0BAAW,yBAA0B,CACrC,UAAU,CAAE,OAAO,CACnB,aAAa,CAAE,GACf,CAEE,iCAAmB,CACjB,IAAI,CAAE,CAAC,CACP,aAAa,CAAE,IAAI,CACnB,UAAU,CAAE,MACd"}`
+      code: ".modal-overlay.svelte-1h14j69{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0, 0, 0, 0.5);z-index:999}.cover-image-container.svelte-1h14j69{position:relative;width:100%;height:300px;overflow:hidden;margin-bottom:20px}.cover-image.svelte-1h14j69{width:100%;height:100%;object-fit:cover;object-position:center}.modal-content.svelte-1h14j69{display:flex;justify-content:center}.modal.svelte-1h14j69{display:block;position:fixed;z-index:1;padding-top:60px;left:0;top:0;width:100%;height:100%;overflow:hidden;overflow-y:hidden;background-color:rgba(0, 0, 0, 0.4);opacity:1;transform-origin:center center;transition:opacity 0.3s ease, transform 0.3s ease;position:fixed;background:white;z-index:1000;transition:all 0.3s ease}.fade-out.svelte-1h14j69{opacity:0}.modal-image.svelte-1h14j69{position:absolute;top:0;left:0;width:100%;height:100%;background-color:#000000;z-index:0}.close.svelte-1h14j69{color:#aaa;float:right;font-size:28px;font-weight:bold}.close.svelte-1h14j69:hover,.close.svelte-1h14j69:focus{text-decoration:none;cursor:pointer}.modal-text.svelte-1h14j69{position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);padding:20px;border-radius:10px;text-align:Left;width:100%;height:100%;color:white;overflow-y:scroll;margin:10px}h1.svelte-1h14j69{font-size:3.5em;margin:5px}@media(max-width: 600px){h1.svelte-1h14j69{font-size:2.5em}img.svelte-1h14j69{width:100%;height:auto}}.modal-text.svelte-1h14j69::-webkit-scrollbar{width:2px;border-radius:80%}.modal-text.svelte-1h14j69::-webkit-scrollbar-track{background:#000000;width:0;visibility:hidden}.modal-text.svelte-1h14j69::-webkit-scrollbar-thumb{background:#ffffff;border-radius:2px}.content-container.svelte-1h14j69{flex:1;padding-right:20px;overflow-y:hidden}",
+      map: `{"version":3,"file":"Modal.svelte","sources":["Modal.svelte"],"sourcesContent":["<script>\\n  import { onMount, onDestroy } from 'svelte';\\n  import { tweened } from 'svelte/motion';\\n  import { cubicOut } from 'svelte/easing';\\n  import  Toc from './Toc.svelte'\\n  export let id;\\n  export let onClose;\\n  export let dimensions;\\n\\n  const size = tweened(\\n    { width: dimensions.width, height: dimensions.height, top: dimensions.top, left: dimensions.left },\\n    { duration: 2, easing: cubicOut }\\n  );\\n\\n  let content;\\n  let isClosing = false;\\n  let tocHtml = '';\\n  let modalElement;\\n  const modalsData = {\\n    modal1: {\\n      title: 'Engineering',\\n      content: \`\\n      <section>\\n        <h2> The Design Process</h2>\\n        <p> Our Design Process consists of 5 stages: </p>\\n        <ol>\\n          <li> Research </li>\\n          <li> Design </li>\\n          <li> Prototype </li>\\n          <li> Test </li>\\n          <li> Launch </li>\\n        </ol>\\n      </section>\\n      \\n\\n<style>\\n  a {\\n    color:white;\\n    text-decoration: underline;\\n  }\\n  </style>\\n\\n\\n\\n      \`,\\n      image: \\"/d41586-024-02191-1_27293496.jpg\\"\\n    },\\n    modal2: {\\n      title: 'Sample',\\n      content: \`\\n      <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/Ad01.jpg\\"\\n    },\\n    modal3: {\\n      title: 'Sample',\\n      content: \`\\n\\n     <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/HTML.webp\\"\\n    },\\n    modal4: {\\n      title: 'Sample',\\n      content: \`\\n     <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/AiEmer.jpg\\"\\n    },\\n    modal5: {\\n      title: 'Sample',\\n      content: \`\\n      <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/amazon.jpeg\\"\\n    }\\n  };\\n\\n  onMount(() => {\\n    // Start at the image size\\n    modalElement.style.width = \`\${dimensions.width}px\`;\\n    modalElement.style.height = \`\${dimensions.height}px\`;\\n    modalElement.style.top = \`\${dimensions.top}px\`;\\n    modalElement.style.left = \`\${dimensions.left}px\`;\\n    // Animate to full screen after a short delay\\n    setTimeout(() => {\\n      size.set({ width: window.innerWidth, height: window.innerHeight, top: 0, left: 0 });\\n    }, 50);\\n    window.addEventListener('resize', handleResize);\\n  });\\n\\n  onDestroy(() => {\\n  // Remove resize event listener\\n  window.removeEventListener('resize', handleResize);\\n  });\\n  function handleClose() {\\n    isClosing = true;\\n    // Animate back to original size\\n    size.set({ width: dimensions.width, height: dimensions.height, top: dimensions.top, left: dimensions.left })\\n      .then(() => {\\n        if (typeof onClose === 'function') {\\n          onClose();\\n        }\\n        isClosing = false;\\n      });\\n  }\\n\\n\\n  function handleResize() {\\n  if (modalElement) {\\n    size.set({ width: window.innerWidth, height: window.innerHeight, top: 0, left: 0 });\\n  }\\n}\\n\\n\\nfunction generateTOC(content) {\\n  const tempDiv = document.createElement('div');\\n  tempDiv.innerHTML = content;\\n  const headings = tempDiv.querySelectorAll('h2, h3');\\n   let tocHtml = '';\\n  headings.forEach((heading, index) => {\\n    const level = heading.tagName.toLowerCase();\\n    const text = heading.textContent;\\n    const id = \`section-\${index}\`; // Generate unique ID for each section\\n   heading.id = id; // Assign ID to the heading for linking\\n    const listItem = \`<li><a href=\\"#\${id}\\"><\${level}>\${text}</\${level}></a></li>\`;\\n    tocHtml += listItem;\\n  });\\n  return \`<ul>\${tocHtml}</ul>\`;\\n}\\n\\nfunction scrollToSection(id) {\\n  const section = document.getElementById(id);\\n    if (section) {\\n      section.scrollIntoView({ behavior: 'smooth' });\\n    }\\n}\\n\\n\\n\\n\\n\\n\\n\\n\\n<\/script>\\n<div class=\\"modal-overlay\\" class:fade-out={isClosing} on:click={handleClose}></div>\\n<div\\n  bind:this={modalElement}\\n  class=\\"modal\\"\\n  class:fade-out={isClosing}\\n  id={id}\\n  style=\\"width: {$size.width}px; height: {$size.height}px; top: {$size.top}px; left: {$size.left}px;\\"\\n>\\n  <div class=\\"modal-image\\"></div>\\n  <div class='modal-content'>\\n    <span class=\\"close\\" id='closecross' on:click={handleClose}>&times;</span>\\n    <div class=\\"modal-text\\">\\n      {#if modalsData[id].image}\\n      <div class=\\"cover-image-container\\">\\n        <img src={modalsData[id].image} alt={modalsData[id].title} class='cover-image' />\\n      </div>\\n      {/if}\\n      <h1>{modalsData[id].title}</h1>\\n      <div class=\\"content-container\\">\\n        <hr>\\n        <div class=\\"content\\">\\n          {@html modalsData[id].content}\\n        </div>\\n      </div>\\n    </div>\\n  </div>\\n</div>\\n\\n<style>\\n.modal-overlay {\\n    position: fixed;\\n    top: 0;\\n    left: 0;\\n    width: 100%;\\n    height: 100%;\\n    background: rgba(0, 0, 0, 0.5);\\n    z-index: 999;\\n  }\\n  .cover-image-container {\\n  position: relative;\\n  width: 100%;\\n  height: 300px; /* Adjust height as needed */\\n  overflow: hidden;\\n  margin-bottom: 20px;\\n}\\n\\n.cover-image {\\n  width: 100%;\\n  height: 100%;\\n  object-fit: cover;\\n  object-position: center;\\n}\\n  .modal-content {\\n    display: flex;\\n    justify-content: center;\\n  }\\n  .modal {\\n    display: block;\\n    position: fixed;\\n    z-index: 1;\\n    padding-top: 60px;\\n    left: 0;\\n    top: 0;\\n    width: 100%;\\n    height: 100%;\\n    overflow: hidden;\\n    overflow-y: hidden;\\n    background-color: rgba(0, 0, 0, 0.4);\\n    opacity: 1;\\n    transform-origin: center center;\\n    transition: opacity 0.3s ease, transform 0.3s ease;\\n    position: fixed;\\n    background: white;\\n    z-index: 1000;\\n    transition: all 0.3s ease;\\n    \\n  }\\n  .scale-in {\\n    opacity: 1;\\n    transform: scale(1);\\n  }\\n  .scale-out {\\n    opacity: 0;\\n    transform: scale(0.5);\\n  }\\n  .container {\\n    overflow: visible;\\n    margin: 0;\\n    padding: 0;\\n    width: 100%;\\n    height: 100%;\\n  }\\n  .fade-in {\\n    opacity: 1;\\n  }\\n  .fade-out {\\n    opacity: 0;\\n  }\\n  .modal-image {\\n    position: absolute;\\n    top: 0;\\n    left: 0;\\n    width: 100%;\\n    height: 100%;\\n    background-color: #000000;\\n    z-index: 0;\\n  }\\n\\n  .close {\\n    color: #aaa;\\n    float: right;\\n    font-size: 28px;\\n    font-weight: bold;\\n  }\\n  .close:hover,\\n  .close:focus {\\n    text-decoration: none;\\n    cursor: pointer;\\n  }\\n  .modal-text {\\n    position: absolute;\\n    top: 50%;\\n    left: 50%;\\n    transform: translate(-50%, -50%);\\n    /* background-color: rgba(20, 20, 20, 0.8); */\\n    padding: 20px;\\n    border-radius: 10px;\\n    text-align: Left;\\n    width: 100%;\\n    height: 100%;\\n    color: white;\\n    overflow-y: scroll;\\n    margin: 10px;\\n  }\\n  h1 {\\n    font-size: 3.5em;\\n    margin: 5px;\\n  }\\n  @media (max-width: 600px) {\\n  h1 {\\n    font-size:2.5em;\\n\\n  }\\n  img {\\n    width: 100%;\\n    height: auto;\\n  }\\n}\\n.modal-text::-webkit-scrollbar {\\nwidth: 2px;\\n  border-radius: 80%;\\n}\\n.modal-text::-webkit-scrollbar-track{\\nbackground: #000000;\\n  width:0;\\n  visibility: hidden;\\n}\\n.modal-text::-webkit-scrollbar-thumb {\\nbackground: #ffffff;\\nborder-radius: 2px;\\n}\\n\\n  .content-container {\\n    flex: 1;\\n    padding-right: 20px; /* Adjust spacing between TOC and content */\\n    overflow-y: hidden; /* Allow scrolling if content is too long */\\n  }\\n\\n\\n</style>\\n"],"names":[],"mappings":"AAmLA,6BAAe,CACX,QAAQ,CAAE,KAAK,CACf,GAAG,CAAE,CAAC,CACN,IAAI,CAAE,CAAC,CACP,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,UAAU,CAAE,KAAK,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,GAAG,CAAC,CAC9B,OAAO,CAAE,GACX,CACA,qCAAuB,CACvB,QAAQ,CAAE,QAAQ,CAClB,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,KAAK,CACb,QAAQ,CAAE,MAAM,CAChB,aAAa,CAAE,IACjB,CAEA,2BAAa,CACX,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,UAAU,CAAE,KAAK,CACjB,eAAe,CAAE,MACnB,CACE,6BAAe,CACb,OAAO,CAAE,IAAI,CACb,eAAe,CAAE,MACnB,CACA,qBAAO,CACL,OAAO,CAAE,KAAK,CACd,QAAQ,CAAE,KAAK,CACf,OAAO,CAAE,CAAC,CACV,WAAW,CAAE,IAAI,CACjB,IAAI,CAAE,CAAC,CACP,GAAG,CAAE,CAAC,CACN,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,QAAQ,CAAE,MAAM,CAChB,UAAU,CAAE,MAAM,CAClB,gBAAgB,CAAE,KAAK,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,GAAG,CAAC,CACpC,OAAO,CAAE,CAAC,CACV,gBAAgB,CAAE,MAAM,CAAC,MAAM,CAC/B,UAAU,CAAE,OAAO,CAAC,IAAI,CAAC,IAAI,CAAC,CAAC,SAAS,CAAC,IAAI,CAAC,IAAI,CAClD,QAAQ,CAAE,KAAK,CACf,UAAU,CAAE,KAAK,CACjB,OAAO,CAAE,IAAI,CACb,UAAU,CAAE,GAAG,CAAC,IAAI,CAAC,IAEvB,CAmBA,wBAAU,CACR,OAAO,CAAE,CACX,CACA,2BAAa,CACX,QAAQ,CAAE,QAAQ,CAClB,GAAG,CAAE,CAAC,CACN,IAAI,CAAE,CAAC,CACP,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,gBAAgB,CAAE,OAAO,CACzB,OAAO,CAAE,CACX,CAEA,qBAAO,CACL,KAAK,CAAE,IAAI,CACX,KAAK,CAAE,KAAK,CACZ,SAAS,CAAE,IAAI,CACf,WAAW,CAAE,IACf,CACA,qBAAM,MAAM,CACZ,qBAAM,MAAO,CACX,eAAe,CAAE,IAAI,CACrB,MAAM,CAAE,OACV,CACA,0BAAY,CACV,QAAQ,CAAE,QAAQ,CAClB,GAAG,CAAE,GAAG,CACR,IAAI,CAAE,GAAG,CACT,SAAS,CAAE,UAAU,IAAI,CAAC,CAAC,IAAI,CAAC,CAEhC,OAAO,CAAE,IAAI,CACb,aAAa,CAAE,IAAI,CACnB,UAAU,CAAE,IAAI,CAChB,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,KAAK,CAAE,KAAK,CACZ,UAAU,CAAE,MAAM,CAClB,MAAM,CAAE,IACV,CACA,iBAAG,CACD,SAAS,CAAE,KAAK,CAChB,MAAM,CAAE,GACV,CACA,MAAO,YAAY,KAAK,CAAE,CAC1B,iBAAG,CACD,UAAU,KAEZ,CACA,kBAAI,CACF,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IACV,CACF,CACA,0BAAW,mBAAoB,CAC/B,KAAK,CAAE,GAAG,CACR,aAAa,CAAE,GACjB,CACA,0BAAW,yBAAyB,CACpC,UAAU,CAAE,OAAO,CACjB,MAAM,CAAC,CACP,UAAU,CAAE,MACd,CACA,0BAAW,yBAA0B,CACrC,UAAU,CAAE,OAAO,CACnB,aAAa,CAAE,GACf,CAEE,iCAAmB,CACjB,IAAI,CAAE,CAAC,CACP,aAAa,CAAE,IAAI,CACnB,UAAU,CAAE,MACd"}`
     };
     Modal = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let $size, $$unsubscribe_size;
       let { id } = $$props;
       let { onClose } = $$props;
-      let content;
+      let { dimensions } = $$props;
+      const size = tweened(
+        {
+          width: dimensions.width,
+          height: dimensions.height,
+          top: dimensions.top,
+          left: dimensions.left
+        },
+        { duration: 2, easing: cubicOut }
+      );
+      $$unsubscribe_size = subscribe(size, (value) => $size = value);
+      let modalElement;
       const modalsData = {
         modal1: {
           title: "Engineering",
           content: `
-      <p>Engineering page</p>
+      <section>
+        <h2> The Design Process</h2>
+        <p> Our Design Process consists of 5 stages: </p>
+        <ol>
+          <li> Research </li>
+          <li> Design </li>
+          <li> Prototype </li>
+          <li> Test </li>
+          <li> Launch </li>
+        </ol>
+      </section>
+      
+
 <style>
   a {
     color:white;
@@ -1635,12 +1072,17 @@ var init_page_svelte = __esm({
           image: "/amazon.jpeg"
         }
       };
-      if ($$props.id === void 0 && $$bindings.id && id !== void 0)
-        $$bindings.id(id);
-      if ($$props.onClose === void 0 && $$bindings.onClose && onClose !== void 0)
-        $$bindings.onClose(onClose);
+      onDestroy(() => {
+        window.removeEventListener("resize", handleResize);
+      });
+      function handleResize() {
+      }
+      if ($$props.id === void 0 && $$bindings.id && id !== void 0) $$bindings.id(id);
+      if ($$props.onClose === void 0 && $$bindings.onClose && onClose !== void 0) $$bindings.onClose(onClose);
+      if ($$props.dimensions === void 0 && $$bindings.dimensions && dimensions !== void 0) $$bindings.dimensions(dimensions);
       $$result.css.add(css$2);
-      return `<div class="${"modal " + escape("fade-in", true) + " svelte-181otsg"}"${add_attribute("id", id, 0)}><div class="container svelte-181otsg"><span class="close svelte-181otsg" id="closecross" data-svelte-h="svelte-1l7plis">\xD7</span> <img class="modal-image svelte-181otsg"${add_attribute("src", modalsData[id].image, 0)}> <div class="modal-text svelte-181otsg"><h1 class="svelte-181otsg">${escape(modalsData[id].title)}</h1> <div class="toc">${validate_component(Toc, "Toc").$$render($$result, { class: "toc" }, {}, {})}</div> <div class="content-container svelte-181otsg"><hr> <div class="content"><!-- HTML_TAG_START -->${content}<!-- HTML_TAG_END --></div></div></div></div> </div>`;
+      $$unsubscribe_size();
+      return `<div class="${["modal-overlay svelte-1h14j69", ""].join(" ").trim()}"></div> <div class="${["modal svelte-1h14j69", ""].join(" ").trim()}"${add_attribute("id", id, 0)} style="${"width: " + escape($size.width, true) + "px; height: " + escape($size.height, true) + "px; top: " + escape($size.top, true) + "px; left: " + escape($size.left, true) + "px;"}"${add_attribute("this", modalElement, 0)}><div class="modal-image svelte-1h14j69"></div> <div class="modal-content svelte-1h14j69"><span class="close svelte-1h14j69" id="closecross" data-svelte-h="svelte-1l7plis">\xD7</span> <div class="modal-text svelte-1h14j69">${modalsData[id].image ? `<div class="cover-image-container svelte-1h14j69"><img${add_attribute("src", modalsData[id].image, 0)}${add_attribute("alt", modalsData[id].title, 0)} class="cover-image svelte-1h14j69"></div>` : ``} <h1 class="svelte-1h14j69">${escape(modalsData[id].title)}</h1> <div class="content-container svelte-1h14j69"><hr> <div class="content"><!-- HTML_TAG_START -->${modalsData[id].content}<!-- HTML_TAG_END --></div></div></div></div> </div>`;
     });
     css$1 = {
       code: ".instruction-card.svelte-laq1tm.svelte-laq1tm{background:#333;color:white;padding:1rem;border-radius:8px;margin:1rem;text-align:left;flex-shrink:0}.instruction-card.svelte-laq1tm button.svelte-laq1tm{margin-top:1rem;padding:0.5rem 1rem;background:#fff;border:none;color:#333;cursor:pointer;border-radius:4px}.instruction-card.svelte-laq1tm button.svelte-laq1tm:hover{background:#ddd}",
@@ -1652,8 +1094,8 @@ var init_page_svelte = __esm({
       return `<div class="instruction-card svelte-laq1tm"><h1 data-svelte-h="svelte-yqkvhw">How to Use the Site</h1> <ul>${``} <li data-svelte-h="svelte-54qq1q"><p>This site uses scrolling to move between cards.</p></li> <li data-svelte-h="svelte-1bbx9lk"><p>To move the cards left or right, use the scroll wheel on your mouse.</p></li> <li data-svelte-h="svelte-1iurnme"><p>To see information about the topic on a card, click on it.</p></li> <li data-svelte-h="svelte-15uymth"><p>At the top of each card, there is a table of contents, click on a section to scroll there.</p></li> <li data-svelte-h="svelte-18sr52j"><p>To close the card press the &#39;x&#39; in the top right corner</p></li> <li data-svelte-h="svelte-xnpchy"><p>If you cannot scroll please make sure Javascript is enabled in your browser</p></li></ul> <p data-svelte-h="svelte-1sq99no">Click the button below to dismiss this message, it will not be shown again.</p> <button class="svelte-laq1tm" data-svelte-h="svelte-zzef9w">Got it!</button> </div>`;
     });
     css = {
-      code: ".text-overlay.svelte-1sh12nl{overflow:hidden}.darker.svelte-1sh12nl{filter:brightness(0.7)}",
-      map: `{"version":3,"file":"main.svelte","sources":["main.svelte"],"sourcesContent":["<script>\\n  import { onMount, onDestroy } from 'svelte';\\n  import { goto } from '$app/navigation'; // Import goto from SvelteKit\\n  import Modal from './Modal.svelte'; // Import the Modal component\\n  import './styles.css';\\n  import InstructionCard from './InstructionCard.svelte';\\n\\n  let showInstructions = true;\\n  let isModalOpen = false;\\n  let currentModalId;\\n  let modal = null;\\n  let track;\\n  let isMouseDown = false;\\n  let initialMouseX = 0;\\n  let lastKnownPercentage = -10;\\n  let dragSensitivity = 0.01;\\n  let scrollSensitivity = 0.2;\\nlet isMobile = false;\\n  const isBrowser = typeof window !== 'undefined';\\n\\n  function dismissInstructions() {\\n    localStorage.setItem('instructionsDismissed', 'true');\\n    showInstructions = false;\\n  }\\n  function openModal(modalId) {\\n    isModalOpen = true;\\n    currentModalId = modalId;\\n    goto(\`#\${modalId}\`, { replaceState: true });\\n  }\\n\\n  function closeModal() {\\n    isModalOpen = false;\\n    currentModalId = null;\\n    goto('/', { replaceState: true });\\n  }\\n\\n  \\n\\n  function handleMouseDown(e) {\\n    if (!isModalOpen) {\\n      isMouseDown = true;\\n      initialMouseX = e.clientX;\\n    }\\n  }\\n\\n  function handleMouseMove(e) {\\n    if (isMouseDown && !isModalOpen && !isMobile) {\\n      const mouseDelta = initialMouseX - e.clientX;\\n      const maxDelta = window.innerWidth / 2;\\n\\n      lastKnownPercentage = Math.max(\\n        Math.min(lastKnownPercentage + (mouseDelta / maxDelta) * -100 * dragSensitivity, -10),\\n        -100\\n      );\\n\\n      updateTransform();\\n    }\\n  }\\n  function handleResize() {\\n    isMobile = window.innerWidth <= 600;\\n    if (isMobile) {\\n        scrollOnLoad(-50);\\n        window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n        window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n        window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n        window.removeEventListener(\\"wheel\\", handleWheel);\\n    } else {\\n      scrollOnLoad(-10);\\n        window.addEventListener(\\"mousedown\\", handleMouseDown);\\n        window.addEventListener(\\"mousemove\\", handleMouseMove);\\n        window.addEventListener(\\"mouseup\\", handleMouseUp);\\n        window.addEventListener(\\"wheel\\", handleWheel, { passive: false });\\n    }\\n}\\n\\n  function handleMouseUp() {\\n    isMouseDown = false;\\n  }\\n\\n  function handleWheel(e) {\\n    if (!isModalOpen && !isMobile) {\\n      const delta = e.deltaY || e.detail || e.wheelDelta;\\n      const scrollAmount = delta * scrollSensitivity;\\n      const maxDelta = window.innerHeight / 2;\\n\\n      lastKnownPercentage = Math.max(\\n        Math.min(lastKnownPercentage + (scrollAmount / maxDelta) * -100, -10),\\n        -100\\n      );\\n\\n      updateTransform();\\n      e.preventDefault();\\n    }\\n  }\\n  function scrollOnLoad(x) {\\n    console.log(x);\\n    track.style.transform = \`translate(\${x}%, -50%)\`;\\n\\nfor (const image of track.getElementsByClassName(\\"image\\")) {\\n  image.style.objectPosition = \`\${100 + -10}% center\`;\\n}\\n  }\\n  function updateTransform() {\\n    track.style.transform = \`translate(\${lastKnownPercentage}%, -50%)\`;\\n\\n    for (const image of track.getElementsByClassName(\\"image\\")) {\\n      image.style.objectPosition = \`\${100 + lastKnownPercentage}% center\`;\\n    }\\n  }\\n\\n  if (isBrowser) {\\n    function handlePopState() {\\n      isModalOpen = false;\\n      currentModalId = null;\\n    }\\n    onMount(() => {\\n      const dismissed = localStorage.getItem('instructionsDismissed');\\n        showInstructions = !dismissed;\\n\\n        track = document.getElementById(\\"image-track\\");\\n        handleResize();\\n\\n        if (isMobile) {\\n            window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n            window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n            window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n            window.removeEventListener(\\"wheel\\", handleWheel);\\n        } else {\\n            window.addEventListener(\\"mousedown\\", handleMouseDown);\\n            window.addEventListener(\\"mousemove\\", handleMouseMove);\\n            window.addEventListener(\\"mouseup\\", handleMouseUp);\\n            window.addEventListener(\\"wheel\\", handleWheel, { passive: false });\\n        }\\n\\n        window.addEventListener('popstate', handlePopState);\\n        window.addEventListener('resize', handleResize);\\n    });\\n\\n    onDestroy(() => {\\n      window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n        window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n        window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n        window.removeEventListener(\\"wheel\\", handleWheel);\\n        window.removeEventListener('popstate', handlePopState);\\n        window.removeEventListener('resize', handleResize);\\n    });\\n  }\\n\\n<\/script>\\n<div id=\\"image-track\\">\\n  {#if showInstructions}\\n\\n      <InstructionCard on:dismiss={dismissInstructions} />\\n    {/if}\\n  <div class=\\"image-container\\" on:click={() => openModal('modal1')}>\\n    <img class=\\"image\\" src=\\"/d41586-024-02191-1_27293496.jpg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Engineering</div>  <!-- Change title here -->\\n  </div>\\n  <div class=\\"image-container\\" on:click={() => openModal('modal2')}>\\n    <img class=\\"image\\" src=\\"/Ad01.jpg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Python</div>\\n  </div>\\n  <div class=\\"image-container \\" on:click={() => openModal('modal3')}>\\n    <img class=\\"image darker\\" src=\\"/HTML.webp\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">HTML</div>\\n  </div>\\n  <div class=\\"image-container\\" on:click={() => openModal('modal4')}>\\n    <img class=\\"image\\" src=\\"/AiEmer.jpg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">AI/Emerging Technologies</div>\\n  </div>\\n  <div class=\\"image-container\\" on:click={() => openModal('modal5')}>\\n    <img class=\\"image darker\\" src=\\"/amazon.jpeg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Amazon Technologies Project</div>\\n  </div>\\n</div>\\n\\n<style>\\n  .text-overlay {\\n    overflow: hidden;\\n  }\\n  .darker {\\n    filter: brightness(0.7);\\n  }\\n  </style>\\n{#if isModalOpen}\\n<Modal id={currentModalId} onClose={closeModal} />\\n{/if}"],"names":[],"mappings":"AAiLE,4BAAc,CACZ,QAAQ,CAAE,MACZ,CACA,sBAAQ,CACN,MAAM,CAAE,WAAW,GAAG,CACxB"}`
+      code: ".text-overlay.svelte-dxpaz5{overflow:hidden}.darker.svelte-dxpaz5{filter:brightness(0.7)}",
+      map: `{"version":3,"file":"main.svelte","sources":["main.svelte"],"sourcesContent":["<script>\\n  import { onMount, onDestroy } from 'svelte';\\n  import { goto } from '$app/navigation'; // Import goto from SvelteKit\\n  import Modal from './Modal.svelte'; // Import the Modal component\\n  import './styles.css';\\n  import InstructionCard from './InstructionCard.svelte';\\n\\n  let showInstructions = true;\\n  let isModalOpen = false;\\n  let currentModalId;\\n  let modal = null;\\n  let track;\\n  let isMouseDown = false;\\n  let initialMouseX = 0;\\n  let lastKnownPercentage = -10;\\n  let dragSensitivity = 0.01;\\n  let scrollSensitivity = 0.2;\\nlet isMobile = false;\\nlet modalDimensions = null;\\n  const isBrowser = typeof window !== 'undefined';\\n\\n  function dismissInstructions() {\\n    localStorage.setItem('instructionsDismissed', 'true');\\n    showInstructions = false;\\n  }\\n  function openModal(modalId, event) {\\n  const container = event.currentTarget;\\n  const rect = container.getBoundingClientRect();\\n  isModalOpen = true;\\n  currentModalId = modalId;\\n  modalDimensions = {\\n    width: rect.width,\\n    height: rect.height,\\n    top: rect.top,\\n    left: rect.left\\n  };\\n  goto(\`#\${modalId}\`, { replaceState: true });\\n}\\n\\n  function closeModal() {\\n    isModalOpen = false;\\n    currentModalId = null;\\n    goto('/', { replaceState: true });\\n  }\\n\\n  \\n\\n  function handleMouseDown(e) {\\n    if (!isModalOpen) {\\n      isMouseDown = true;\\n      initialMouseX = e.clientX;\\n    }\\n  }\\n\\n  function handleMouseMove(e) {\\n    if (isMouseDown && !isModalOpen && !isMobile) {\\n      const mouseDelta = initialMouseX - e.clientX;\\n      const maxDelta = window.innerWidth / 2;\\n\\n      lastKnownPercentage = Math.max(\\n        Math.min(lastKnownPercentage + (mouseDelta / maxDelta) * -100 * dragSensitivity, -10),\\n        -100\\n      );\\n\\n      updateTransform();\\n    }\\n  }\\n  function handleResize() {\\n    isMobile = window.innerWidth <= 600;\\n    if (isMobile) {\\n        scrollOnLoad(-50);\\n        window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n        window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n        window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n        window.removeEventListener(\\"wheel\\", handleWheel);\\n    } else {\\n      scrollOnLoad(-10);\\n        window.addEventListener(\\"mousedown\\", handleMouseDown);\\n        window.addEventListener(\\"mousemove\\", handleMouseMove);\\n        window.addEventListener(\\"mouseup\\", handleMouseUp);\\n        window.addEventListener(\\"wheel\\", handleWheel, { passive: false });\\n    }\\n}\\n\\n  function handleMouseUp() {\\n    isMouseDown = false;\\n  }\\n\\n  function handleWheel(e) {\\n    if (!isModalOpen && !isMobile) {\\n      const delta = e.deltaY || e.detail || e.wheelDelta;\\n      const scrollAmount = delta * scrollSensitivity;\\n      const maxDelta = window.innerHeight / 2;\\n\\n      lastKnownPercentage = Math.max(\\n        Math.min(lastKnownPercentage + (scrollAmount / maxDelta) * -100, -10),\\n        -100\\n      );\\n\\n      updateTransform();\\n      e.preventDefault();\\n    }\\n  }\\n  function scrollOnLoad(x) {\\n    console.log(x);\\n    track.style.transform = \`translate(\${x}%, -50%)\`;\\n\\nfor (const image of track.getElementsByClassName(\\"image\\")) {\\n  image.style.objectPosition = \`\${100 + -10}% center\`;\\n}\\n  }\\n  function updateTransform() {\\n    track.style.transform = \`translate(\${lastKnownPercentage}%, -50%)\`;\\n\\n    for (const image of track.getElementsByClassName(\\"image\\")) {\\n      image.style.objectPosition = \`\${100 + lastKnownPercentage}% center\`;\\n    }\\n  }\\n\\n  if (isBrowser) {\\n    function handlePopState() {\\n      isModalOpen = false;\\n      currentModalId = null;\\n    }\\n    onMount(() => {\\n      const dismissed = localStorage.getItem('instructionsDismissed');\\n        showInstructions = !dismissed;\\n\\n        track = document.getElementById(\\"image-track\\");\\n        handleResize();\\n\\n        if (isMobile) {\\n            window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n            window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n            window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n            window.removeEventListener(\\"wheel\\", handleWheel);\\n        } else {\\n            window.addEventListener(\\"mousedown\\", handleMouseDown);\\n            window.addEventListener(\\"mousemove\\", handleMouseMove);\\n            window.addEventListener(\\"mouseup\\", handleMouseUp);\\n            window.addEventListener(\\"wheel\\", handleWheel, { passive: false });\\n        }\\n\\n        window.addEventListener('popstate', handlePopState);\\n        window.addEventListener('resize', handleResize);\\n    });\\n\\n    onDestroy(() => {\\n      window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n        window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n        window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n        window.removeEventListener(\\"wheel\\", handleWheel);\\n        window.removeEventListener('popstate', handlePopState);\\n        window.removeEventListener('resize', handleResize);\\n    });\\n  }\\n\\n<\/script>\\n<div id=\\"image-track\\">\\n  {#if showInstructions}\\n\\n      <InstructionCard on:dismiss={dismissInstructions} />\\n    {/if}\\n  <div class=\\"image-container\\" on:click={(event) => openModal('modal1', event)}>\\n    <img class=\\"image\\" src=\\"/d41586-024-02191-1_27293496.jpg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Engineering</div>  <!-- Change title here -->\\n  </div>\\n  <div class=\\"image-container\\" on:click={(event) => openModal('modal2', event)}>\\n    <img class=\\"image\\" src=\\"/Ad01.jpg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Sample</div>\\n  </div>\\n  <div class=\\"image-container \\" on:click={(event) => openModal('modal3', event)}>\\n    <img class=\\"image darker\\" src=\\"/HTML.webp\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Sample</div>\\n  </div>\\n  <div class=\\"image-container\\" on:click={(event) => openModal('modal4', event)}>\\n    <img class=\\"image\\" src=\\"/AiEmer.jpg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Sample</div>\\n  </div>\\n  <div class=\\"image-container\\" on:click={(event) => openModal('modal5', event)}>\\n    <img class=\\"image darker\\" src=\\"/amazon.jpeg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Sample</div>\\n  </div>\\n</div>\\n\\n<style>\\n\\n  .text-overlay {\\n    overflow: hidden;\\n  }\\n  .darker {\\n    filter: brightness(0.7);\\n  }\\n\\n  </style>\\n{#if isModalOpen}\\n<Modal id={currentModalId} onClose={closeModal} dimensions={modalDimensions} />\\n{/if}"],"names":[],"mappings":"AA2LE,2BAAc,CACZ,QAAQ,CAAE,MACZ,CACA,qBAAQ,CACN,MAAM,CAAE,WAAW,GAAG,CACxB"}`
     };
     dragSensitivity = 0.01;
     scrollSensitivity = 0.2;
@@ -1665,6 +1107,7 @@ var init_page_svelte = __esm({
       let initialMouseX = 0;
       let lastKnownPercentage = -10;
       let isMobile = false;
+      let modalDimensions = null;
       const isBrowser = typeof window !== "undefined";
       function closeModal() {
         isModalOpen = false;
@@ -1742,7 +1185,16 @@ var init_page_svelte = __esm({
         });
       }
       $$result.css.add(css);
-      return `<div id="image-track">${`${validate_component(InstructionCard, "InstructionCard").$$render($$result, {}, {}, {})}`} <div class="image-container" data-svelte-h="svelte-1akrkvj"><img class="image" src="/d41586-024-02191-1_27293496.jpg" draggable="false" data-active> <div class="text-overlay svelte-1sh12nl">Engineering</div> </div> <div class="image-container" data-svelte-h="svelte-9bcppm"><img class="image" src="/Ad01.jpg" draggable="false" data-active> <div class="text-overlay svelte-1sh12nl">Python</div></div> <div class="image-container " data-svelte-h="svelte-t3cmh"><img class="image darker svelte-1sh12nl" src="/HTML.webp" draggable="false" data-active> <div class="text-overlay svelte-1sh12nl">HTML</div></div> <div class="image-container" data-svelte-h="svelte-vrguxo"><img class="image" src="/AiEmer.jpg" draggable="false" data-active> <div class="text-overlay svelte-1sh12nl">AI/Emerging Technologies</div></div> <div class="image-container" data-svelte-h="svelte-1ftjppe"><img class="image darker svelte-1sh12nl" src="/amazon.jpeg" draggable="false" data-active> <div class="text-overlay svelte-1sh12nl">Amazon Technologies Project</div></div></div>  ${isModalOpen ? `${validate_component(Modal, "Modal").$$render($$result, { id: currentModalId, onClose: closeModal }, {}, {})}` : ``}`;
+      return `<div id="image-track">${`${validate_component(InstructionCard, "InstructionCard").$$render($$result, {}, {}, {})}`} <div class="image-container" data-svelte-h="svelte-1c5c0h9"><img class="image" src="/d41586-024-02191-1_27293496.jpg" draggable="false" data-active> <div class="text-overlay svelte-dxpaz5">Engineering</div> </div> <div class="image-container" data-svelte-h="svelte-jja9b2"><img class="image" src="/Ad01.jpg" draggable="false" data-active> <div class="text-overlay svelte-dxpaz5">Sample</div></div> <div class="image-container " data-svelte-h="svelte-uckj1s"><img class="image darker svelte-dxpaz5" src="/HTML.webp" draggable="false" data-active> <div class="text-overlay svelte-dxpaz5">Sample</div></div> <div class="image-container" data-svelte-h="svelte-i0rqzl"><img class="image" src="/AiEmer.jpg" draggable="false" data-active> <div class="text-overlay svelte-dxpaz5">Sample</div></div> <div class="image-container" data-svelte-h="svelte-rduii7"><img class="image darker svelte-dxpaz5" src="/amazon.jpeg" draggable="false" data-active> <div class="text-overlay svelte-dxpaz5">Sample</div></div></div>  ${isModalOpen ? `${validate_component(Modal, "Modal").$$render(
+        $$result,
+        {
+          id: currentModalId,
+          onClose: closeModal,
+          dimensions: modalDimensions
+        },
+        {},
+        {}
+      )}` : ``}`;
     });
     Page = create_ssr_component(($$result, $$props, $$bindings, slots) => {
       return `${validate_component(Main, "Layout").$$render($$result, {}, {}, {})}`;
@@ -1764,8 +1216,8 @@ var init__3 = __esm({
   ".svelte-kit/output/server/nodes/2.js"() {
     index3 = 2;
     component3 = async () => component_cache3 ??= (await Promise.resolve().then(() => (init_page_svelte(), page_svelte_exports))).default;
-    imports3 = ["_app/immutable/nodes/2.Cnun1awk.js", "_app/immutable/chunks/scheduler.5rEqcWWW.js", "_app/immutable/chunks/index.3m18Cu60.js", "_app/immutable/chunks/entry.xbmA0_Ly.js"];
-    stylesheets3 = ["_app/immutable/assets/2.BjOkaJNC.css"];
+    imports3 = ["_app/immutable/nodes/2.HC41LJi3.js", "_app/immutable/chunks/scheduler.DTurKcvQ.js", "_app/immutable/chunks/index.CvJRIlCB.js", "_app/immutable/chunks/entry.Xyt3Gdu4.js"];
+    stylesheets3 = ["_app/immutable/assets/2.Cju36GS4.css"];
     fonts3 = [];
   }
 });
@@ -1793,6 +1245,10 @@ function set_public_env(environment) {
 function set_safe_public_env(environment) {
   safe_public_env = environment;
 }
+var read_implementation = null;
+function set_read_implementation(fn) {
+  read_implementation = fn;
+}
 function afterUpdate() {
 }
 var prerendering = false;
@@ -1808,20 +1264,13 @@ var Root = create_ssr_component(($$result, $$props, $$bindings, slots) => {
     setContext("__svelte__", stores);
   }
   afterUpdate(stores.page.notify);
-  if ($$props.stores === void 0 && $$bindings.stores && stores !== void 0)
-    $$bindings.stores(stores);
-  if ($$props.page === void 0 && $$bindings.page && page2 !== void 0)
-    $$bindings.page(page2);
-  if ($$props.constructors === void 0 && $$bindings.constructors && constructors !== void 0)
-    $$bindings.constructors(constructors);
-  if ($$props.components === void 0 && $$bindings.components && components !== void 0)
-    $$bindings.components(components);
-  if ($$props.form === void 0 && $$bindings.form && form !== void 0)
-    $$bindings.form(form);
-  if ($$props.data_0 === void 0 && $$bindings.data_0 && data_0 !== void 0)
-    $$bindings.data_0(data_0);
-  if ($$props.data_1 === void 0 && $$bindings.data_1 && data_1 !== void 0)
-    $$bindings.data_1(data_1);
+  if ($$props.stores === void 0 && $$bindings.stores && stores !== void 0) $$bindings.stores(stores);
+  if ($$props.page === void 0 && $$bindings.page && page2 !== void 0) $$bindings.page(page2);
+  if ($$props.constructors === void 0 && $$bindings.constructors && constructors !== void 0) $$bindings.constructors(constructors);
+  if ($$props.components === void 0 && $$bindings.components && components !== void 0) $$bindings.components(components);
+  if ($$props.form === void 0 && $$bindings.form && form !== void 0) $$bindings.form(form);
+  if ($$props.data_0 === void 0 && $$bindings.data_0 && data_0 !== void 0) $$bindings.data_0(data_0);
+  if ($$props.data_1 === void 0 && $$bindings.data_1 && data_1 !== void 0) $$bindings.data_1(data_1);
   let $$settled;
   let $$rendered;
   let previous_head = $$result.head;
@@ -1883,7 +1332,7 @@ var options = {
   root: Root,
   service_worker: false,
   templates: {
-    app: ({ head, body: body2, assets: assets2, nonce, env }) => '<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="utf-8" />\n    <title>Portfolio - Arjun Y9</title>\n    <link rel="icon" href="' + assets2 + '/favicon.png" />\n    <meta name="viewport" content="width=device-width, initial-scale=1" />\n    ' + head + '\n  </head>\n  <body data-sveltekit-preload-data="hover">\n    <div style="display: contents">' + body2 + "</div>\n\n  </body>\n  <body>\n  <noscript>Please Enable Javascript to use this website\n    <style>\nnoscript {\n  color: white;\n  font-size: 2.4em\n}\ndiv {\n  display: none;\n}\n    </style>\n  </noscript>\n  </body>\n</html>\n",
+    app: ({ head, body: body2, assets: assets2, nonce, env }) => '<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="utf-8" />\n    <title>Whitgift CanSat</title>\n    <link rel="icon" href="' + assets2 + '/favicon.png" />\n    <meta name="viewport" content="width=device-width, initial-scale=1" />\n    ' + head + '\n  </head>\n  <body data-sveltekit-preload-data="hover">\n    <div style="display: contents">' + body2 + "</div>\n\n  </body>\n  <body>\n  <noscript>Please Enable Javascript to use this website\n    <style>\nnoscript {\n  color: white;\n  font-size: 2.4em\n}\ndiv {\n  display: none;\n}\n    </style>\n  </noscript>\n  </body>\n</html>\n",
     error: ({ status, message }) => '<!doctype html>\n<html lang="en">\n	<head>\n		<meta charset="utf-8" />\n		<title>' + message + `</title>
 
 		<style>
@@ -1955,7 +1404,7 @@ var options = {
 		<div class="error">
 			<span class="status">` + status + '</span>\n			<div class="message">\n				<h1>' + message + "</h1>\n			</div>\n		</div>\n	</body>\n</html>\n"
   },
-  version_hash: "15v9da6"
+  version_hash: "1aem7eb"
 };
 async function get_hooks() {
   return {};
@@ -1963,8 +1412,547 @@ async function get_hooks() {
 
 // .svelte-kit/output/server/index.js
 init_exports();
-init_devalue();
-init_ssr();
+
+// node_modules/devalue/src/utils.js
+var escaped = {
+  "<": "\\u003C",
+  "\\": "\\\\",
+  "\b": "\\b",
+  "\f": "\\f",
+  "\n": "\\n",
+  "\r": "\\r",
+  "	": "\\t",
+  "\u2028": "\\u2028",
+  "\u2029": "\\u2029"
+};
+var DevalueError = class extends Error {
+  /**
+   * @param {string} message
+   * @param {string[]} keys
+   */
+  constructor(message, keys) {
+    super(message);
+    this.name = "DevalueError";
+    this.path = keys.join("");
+  }
+};
+function is_primitive(thing) {
+  return Object(thing) !== thing;
+}
+var object_proto_names = /* @__PURE__ */ Object.getOwnPropertyNames(
+  Object.prototype
+).sort().join("\0");
+function is_plain_object(thing) {
+  const proto = Object.getPrototypeOf(thing);
+  return proto === Object.prototype || proto === null || Object.getOwnPropertyNames(proto).sort().join("\0") === object_proto_names;
+}
+function get_type(thing) {
+  return Object.prototype.toString.call(thing).slice(8, -1);
+}
+function get_escaped_char(char) {
+  switch (char) {
+    case '"':
+      return '\\"';
+    case "<":
+      return "\\u003C";
+    case "\\":
+      return "\\\\";
+    case "\n":
+      return "\\n";
+    case "\r":
+      return "\\r";
+    case "	":
+      return "\\t";
+    case "\b":
+      return "\\b";
+    case "\f":
+      return "\\f";
+    case "\u2028":
+      return "\\u2028";
+    case "\u2029":
+      return "\\u2029";
+    default:
+      return char < " " ? `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}` : "";
+  }
+}
+function stringify_string(str) {
+  let result = "";
+  let last_pos = 0;
+  const len = str.length;
+  for (let i = 0; i < len; i += 1) {
+    const char = str[i];
+    const replacement = get_escaped_char(char);
+    if (replacement) {
+      result += str.slice(last_pos, i) + replacement;
+      last_pos = i + 1;
+    }
+  }
+  return `"${last_pos === 0 ? str : result + str.slice(last_pos)}"`;
+}
+function enumerable_symbols(object) {
+  return Object.getOwnPropertySymbols(object).filter(
+    (symbol) => Object.getOwnPropertyDescriptor(object, symbol).enumerable
+  );
+}
+var is_identifier = /^[a-zA-Z_$][a-zA-Z_$0-9]*$/;
+function stringify_key(key2) {
+  return is_identifier.test(key2) ? "." + key2 : "[" + JSON.stringify(key2) + "]";
+}
+
+// node_modules/devalue/src/uneval.js
+var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$";
+var unsafe_chars = /[<\b\f\n\r\t\0\u2028\u2029]/g;
+var reserved = /^(?:do|if|in|for|int|let|new|try|var|byte|case|char|else|enum|goto|long|this|void|with|await|break|catch|class|const|final|float|short|super|throw|while|yield|delete|double|export|import|native|return|switch|throws|typeof|boolean|default|extends|finally|package|private|abstract|continue|debugger|function|volatile|interface|protected|transient|implements|instanceof|synchronized)$/;
+function uneval(value, replacer) {
+  const counts = /* @__PURE__ */ new Map();
+  const keys = [];
+  const custom = /* @__PURE__ */ new Map();
+  function walk(thing) {
+    if (typeof thing === "function") {
+      throw new DevalueError(`Cannot stringify a function`, keys);
+    }
+    if (!is_primitive(thing)) {
+      if (counts.has(thing)) {
+        counts.set(thing, counts.get(thing) + 1);
+        return;
+      }
+      counts.set(thing, 1);
+      if (replacer) {
+        const str2 = replacer(thing);
+        if (typeof str2 === "string") {
+          custom.set(thing, str2);
+          return;
+        }
+      }
+      const type = get_type(thing);
+      switch (type) {
+        case "Number":
+        case "BigInt":
+        case "String":
+        case "Boolean":
+        case "Date":
+        case "RegExp":
+          return;
+        case "Array":
+          thing.forEach((value2, i) => {
+            keys.push(`[${i}]`);
+            walk(value2);
+            keys.pop();
+          });
+          break;
+        case "Set":
+          Array.from(thing).forEach(walk);
+          break;
+        case "Map":
+          for (const [key2, value2] of thing) {
+            keys.push(
+              `.get(${is_primitive(key2) ? stringify_primitive(key2) : "..."})`
+            );
+            walk(value2);
+            keys.pop();
+          }
+          break;
+        case "Int8Array":
+        case "Uint8Array":
+        case "Uint8ClampedArray":
+        case "Int16Array":
+        case "Uint16Array":
+        case "Int32Array":
+        case "Uint32Array":
+        case "Float32Array":
+        case "Float64Array":
+        case "BigInt64Array":
+        case "BigUint64Array":
+          return;
+        case "ArrayBuffer":
+          return;
+        default:
+          if (!is_plain_object(thing)) {
+            throw new DevalueError(
+              `Cannot stringify arbitrary non-POJOs`,
+              keys
+            );
+          }
+          if (enumerable_symbols(thing).length > 0) {
+            throw new DevalueError(
+              `Cannot stringify POJOs with symbolic keys`,
+              keys
+            );
+          }
+          for (const key2 in thing) {
+            keys.push(stringify_key(key2));
+            walk(thing[key2]);
+            keys.pop();
+          }
+      }
+    }
+  }
+  walk(value);
+  const names = /* @__PURE__ */ new Map();
+  Array.from(counts).filter((entry) => entry[1] > 1).sort((a, b) => b[1] - a[1]).forEach((entry, i) => {
+    names.set(entry[0], get_name(i));
+  });
+  function stringify2(thing) {
+    if (names.has(thing)) {
+      return names.get(thing);
+    }
+    if (is_primitive(thing)) {
+      return stringify_primitive(thing);
+    }
+    if (custom.has(thing)) {
+      return custom.get(thing);
+    }
+    const type = get_type(thing);
+    switch (type) {
+      case "Number":
+      case "String":
+      case "Boolean":
+        return `Object(${stringify2(thing.valueOf())})`;
+      case "RegExp":
+        return `new RegExp(${stringify_string(thing.source)}, "${thing.flags}")`;
+      case "Date":
+        return `new Date(${thing.getTime()})`;
+      case "Array":
+        const members = (
+          /** @type {any[]} */
+          thing.map(
+            (v, i) => i in thing ? stringify2(v) : ""
+          )
+        );
+        const tail = thing.length === 0 || thing.length - 1 in thing ? "" : ",";
+        return `[${members.join(",")}${tail}]`;
+      case "Set":
+      case "Map":
+        return `new ${type}([${Array.from(thing).map(stringify2).join(",")}])`;
+      case "Int8Array":
+      case "Uint8Array":
+      case "Uint8ClampedArray":
+      case "Int16Array":
+      case "Uint16Array":
+      case "Int32Array":
+      case "Uint32Array":
+      case "Float32Array":
+      case "Float64Array":
+      case "BigInt64Array":
+      case "BigUint64Array": {
+        const typedArray = thing;
+        return `new ${type}([${typedArray.toString()}])`;
+      }
+      case "ArrayBuffer": {
+        const ui8 = new Uint8Array(thing);
+        return `new Uint8Array([${ui8.toString()}]).buffer`;
+      }
+      default:
+        const obj = `{${Object.keys(thing).map((key2) => `${safe_key(key2)}:${stringify2(thing[key2])}`).join(",")}}`;
+        const proto = Object.getPrototypeOf(thing);
+        if (proto === null) {
+          return Object.keys(thing).length > 0 ? `Object.assign(Object.create(null),${obj})` : `Object.create(null)`;
+        }
+        return obj;
+    }
+  }
+  const str = stringify2(value);
+  if (names.size) {
+    const params = [];
+    const statements = [];
+    const values = [];
+    names.forEach((name, thing) => {
+      params.push(name);
+      if (custom.has(thing)) {
+        values.push(
+          /** @type {string} */
+          custom.get(thing)
+        );
+        return;
+      }
+      if (is_primitive(thing)) {
+        values.push(stringify_primitive(thing));
+        return;
+      }
+      const type = get_type(thing);
+      switch (type) {
+        case "Number":
+        case "String":
+        case "Boolean":
+          values.push(`Object(${stringify2(thing.valueOf())})`);
+          break;
+        case "RegExp":
+          values.push(thing.toString());
+          break;
+        case "Date":
+          values.push(`new Date(${thing.getTime()})`);
+          break;
+        case "Array":
+          values.push(`Array(${thing.length})`);
+          thing.forEach((v, i) => {
+            statements.push(`${name}[${i}]=${stringify2(v)}`);
+          });
+          break;
+        case "Set":
+          values.push(`new Set`);
+          statements.push(
+            `${name}.${Array.from(thing).map((v) => `add(${stringify2(v)})`).join(".")}`
+          );
+          break;
+        case "Map":
+          values.push(`new Map`);
+          statements.push(
+            `${name}.${Array.from(thing).map(([k, v]) => `set(${stringify2(k)}, ${stringify2(v)})`).join(".")}`
+          );
+          break;
+        default:
+          values.push(
+            Object.getPrototypeOf(thing) === null ? "Object.create(null)" : "{}"
+          );
+          Object.keys(thing).forEach((key2) => {
+            statements.push(
+              `${name}${safe_prop(key2)}=${stringify2(thing[key2])}`
+            );
+          });
+      }
+    });
+    statements.push(`return ${str}`);
+    return `(function(${params.join(",")}){${statements.join(
+      ";"
+    )}}(${values.join(",")}))`;
+  } else {
+    return str;
+  }
+}
+function get_name(num) {
+  let name = "";
+  do {
+    name = chars[num % chars.length] + name;
+    num = ~~(num / chars.length) - 1;
+  } while (num >= 0);
+  return reserved.test(name) ? `${name}0` : name;
+}
+function escape_unsafe_char(c2) {
+  return escaped[c2] || c2;
+}
+function escape_unsafe_chars(str) {
+  return str.replace(unsafe_chars, escape_unsafe_char);
+}
+function safe_key(key2) {
+  return /^[_$a-zA-Z][_$a-zA-Z0-9]*$/.test(key2) ? key2 : escape_unsafe_chars(JSON.stringify(key2));
+}
+function safe_prop(key2) {
+  return /^[_$a-zA-Z][_$a-zA-Z0-9]*$/.test(key2) ? `.${key2}` : `[${escape_unsafe_chars(JSON.stringify(key2))}]`;
+}
+function stringify_primitive(thing) {
+  if (typeof thing === "string") return stringify_string(thing);
+  if (thing === void 0) return "void 0";
+  if (thing === 0 && 1 / thing < 0) return "-0";
+  const str = String(thing);
+  if (typeof thing === "number") return str.replace(/^(-)?0\./, "$1.");
+  if (typeof thing === "bigint") return thing + "n";
+  return str;
+}
+
+// node_modules/devalue/src/base64.js
+function encode64(arraybuffer) {
+  const dv = new DataView(arraybuffer);
+  let binaryString = "";
+  for (let i = 0; i < arraybuffer.byteLength; i++) {
+    binaryString += String.fromCharCode(dv.getUint8(i));
+  }
+  return binaryToAscii(binaryString);
+}
+var KEY_STRING = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function binaryToAscii(str) {
+  let out = "";
+  for (let i = 0; i < str.length; i += 3) {
+    const groupsOfSix = [void 0, void 0, void 0, void 0];
+    groupsOfSix[0] = str.charCodeAt(i) >> 2;
+    groupsOfSix[1] = (str.charCodeAt(i) & 3) << 4;
+    if (str.length > i + 1) {
+      groupsOfSix[1] |= str.charCodeAt(i + 1) >> 4;
+      groupsOfSix[2] = (str.charCodeAt(i + 1) & 15) << 2;
+    }
+    if (str.length > i + 2) {
+      groupsOfSix[2] |= str.charCodeAt(i + 2) >> 6;
+      groupsOfSix[3] = str.charCodeAt(i + 2) & 63;
+    }
+    for (let j = 0; j < groupsOfSix.length; j++) {
+      if (typeof groupsOfSix[j] === "undefined") {
+        out += "=";
+      } else {
+        out += KEY_STRING[groupsOfSix[j]];
+      }
+    }
+  }
+  return out;
+}
+
+// node_modules/devalue/src/constants.js
+var UNDEFINED = -1;
+var HOLE = -2;
+var NAN = -3;
+var POSITIVE_INFINITY = -4;
+var NEGATIVE_INFINITY = -5;
+var NEGATIVE_ZERO = -6;
+
+// node_modules/devalue/src/stringify.js
+function stringify(value, reducers) {
+  const stringified = [];
+  const indexes = /* @__PURE__ */ new Map();
+  const custom = [];
+  if (reducers) {
+    for (const key2 of Object.getOwnPropertyNames(reducers)) {
+      custom.push({ key: key2, fn: reducers[key2] });
+    }
+  }
+  const keys = [];
+  let p = 0;
+  function flatten(thing) {
+    if (typeof thing === "function") {
+      throw new DevalueError(`Cannot stringify a function`, keys);
+    }
+    if (indexes.has(thing)) return indexes.get(thing);
+    if (thing === void 0) return UNDEFINED;
+    if (Number.isNaN(thing)) return NAN;
+    if (thing === Infinity) return POSITIVE_INFINITY;
+    if (thing === -Infinity) return NEGATIVE_INFINITY;
+    if (thing === 0 && 1 / thing < 0) return NEGATIVE_ZERO;
+    const index5 = p++;
+    indexes.set(thing, index5);
+    for (const { key: key2, fn } of custom) {
+      const value2 = fn(thing);
+      if (value2) {
+        stringified[index5] = `["${key2}",${flatten(value2)}]`;
+        return index5;
+      }
+    }
+    let str = "";
+    if (is_primitive(thing)) {
+      str = stringify_primitive2(thing);
+    } else {
+      const type = get_type(thing);
+      switch (type) {
+        case "Number":
+        case "String":
+        case "Boolean":
+          str = `["Object",${stringify_primitive2(thing)}]`;
+          break;
+        case "BigInt":
+          str = `["BigInt",${thing}]`;
+          break;
+        case "Date":
+          const valid = !isNaN(thing.getDate());
+          str = `["Date","${valid ? thing.toISOString() : ""}"]`;
+          break;
+        case "RegExp":
+          const { source, flags } = thing;
+          str = flags ? `["RegExp",${stringify_string(source)},"${flags}"]` : `["RegExp",${stringify_string(source)}]`;
+          break;
+        case "Array":
+          str = "[";
+          for (let i = 0; i < thing.length; i += 1) {
+            if (i > 0) str += ",";
+            if (i in thing) {
+              keys.push(`[${i}]`);
+              str += flatten(thing[i]);
+              keys.pop();
+            } else {
+              str += HOLE;
+            }
+          }
+          str += "]";
+          break;
+        case "Set":
+          str = '["Set"';
+          for (const value2 of thing) {
+            str += `,${flatten(value2)}`;
+          }
+          str += "]";
+          break;
+        case "Map":
+          str = '["Map"';
+          for (const [key2, value2] of thing) {
+            keys.push(
+              `.get(${is_primitive(key2) ? stringify_primitive2(key2) : "..."})`
+            );
+            str += `,${flatten(key2)},${flatten(value2)}`;
+            keys.pop();
+          }
+          str += "]";
+          break;
+        case "Int8Array":
+        case "Uint8Array":
+        case "Uint8ClampedArray":
+        case "Int16Array":
+        case "Uint16Array":
+        case "Int32Array":
+        case "Uint32Array":
+        case "Float32Array":
+        case "Float64Array":
+        case "BigInt64Array":
+        case "BigUint64Array": {
+          const typedArray = thing;
+          const base642 = encode64(typedArray.buffer);
+          str = '["' + type + '","' + base642 + '"]';
+          break;
+        }
+        case "ArrayBuffer": {
+          const arraybuffer = thing;
+          const base642 = encode64(arraybuffer);
+          str = `["ArrayBuffer","${base642}"]`;
+          break;
+        }
+        default:
+          if (!is_plain_object(thing)) {
+            throw new DevalueError(
+              `Cannot stringify arbitrary non-POJOs`,
+              keys
+            );
+          }
+          if (enumerable_symbols(thing).length > 0) {
+            throw new DevalueError(
+              `Cannot stringify POJOs with symbolic keys`,
+              keys
+            );
+          }
+          if (Object.getPrototypeOf(thing) === null) {
+            str = '["null"';
+            for (const key2 in thing) {
+              keys.push(stringify_key(key2));
+              str += `,${stringify_string(key2)},${flatten(thing[key2])}`;
+              keys.pop();
+            }
+            str += "]";
+          } else {
+            str = "{";
+            let started = false;
+            for (const key2 in thing) {
+              if (started) str += ",";
+              started = true;
+              keys.push(stringify_key(key2));
+              str += `${stringify_string(key2)}:${flatten(thing[key2])}`;
+              keys.pop();
+            }
+            str += "}";
+          }
+      }
+    }
+    stringified[index5] = str;
+    return index5;
+  }
+  const index4 = flatten(value);
+  if (index4 < 0) return `${index4}`;
+  return `[${stringified.join(",")}]`;
+}
+function stringify_primitive2(thing) {
+  const type = typeof thing;
+  if (type === "string") return stringify_string(thing);
+  if (thing instanceof String) return stringify_string(thing.toString());
+  if (thing === void 0) return UNDEFINED.toString();
+  if (thing === 0 && 1 / thing < 0) return NEGATIVE_ZERO.toString();
+  if (type === "bigint") return `["BigInt","${thing}"]`;
+  return String(thing);
+}
+
+// .svelte-kit/output/server/index.js
+init_chunks();
 var import_cookie = __toESM(require_cookie(), 1);
 var set_cookie_parser = __toESM(require_set_cookie(), 1);
 var DEV = false;
@@ -1974,7 +1962,7 @@ var PAGE_METHODS = ["GET", "POST", "HEAD"];
 function negotiate(accept, types) {
   const parts = [];
   accept.split(",").forEach((str, i) => {
-    const match = /([^/]+)\/([^;]+)(?:;q=([0-9.]+))?/.exec(str);
+    const match = /([^/ \t]+)\/([^; \t]+)[ \t]*(?:;[ \t]*q=([0-9.]+))?/.exec(str);
     if (match) {
       const [, type, subtype, q = "1"] = match;
       parts.push({ type, subtype, q: +q, i });
@@ -2131,8 +2119,7 @@ function method_not_allowed(mod, method) {
 }
 function allowed_methods(mod) {
   const allowed = ENDPOINT_METHODS.filter((method) => method in mod);
-  if ("GET" in mod || "HEAD" in mod)
-    allowed.push("HEAD");
+  if ("GET" in mod || "HEAD" in mod) allowed.push("HEAD");
   return allowed;
 }
 function static_error_page(options2, status, message) {
@@ -2192,12 +2179,9 @@ function stringify_uses(node) {
   if (node.uses && node.uses.params.size > 0) {
     uses.push(`"params":${JSON.stringify(Array.from(node.uses.params))}`);
   }
-  if (node.uses?.parent)
-    uses.push('"parent":1');
-  if (node.uses?.route)
-    uses.push('"route":1');
-  if (node.uses?.url)
-    uses.push('"url":1');
+  if (node.uses?.parent) uses.push('"parent":1');
+  if (node.uses?.route) uses.push('"route":1');
+  if (node.uses?.url) uses.push('"url":1');
   return `"uses":{${uses.join(",")}}`;
 }
 async function render_endpoint(event, mod, state) {
@@ -2257,8 +2241,7 @@ function is_endpoint_request(event) {
   if (ENDPOINT_METHODS.includes(method) && !PAGE_METHODS.includes(method)) {
     return true;
   }
-  if (method === "POST" && headers2.get("x-sveltekit-action") === "true")
-    return false;
+  if (method === "POST" && headers2.get("x-sveltekit-action") === "true") return false;
   const accept = event.request.headers.get("accept") ?? "*/*";
   return negotiate(accept, ["*", "text/html"]) !== "text/html";
 }
@@ -2301,8 +2284,7 @@ async function handle_action_json_request(event, options2, server2) {
   check_named_default_separate(actions);
   try {
     const data = await call_action(event, actions);
-    if (false)
-      ;
+    if (false) ;
     if (data instanceof ActionFailure) {
       return action_json({
         type: "failure",
@@ -2380,8 +2362,7 @@ async function handle_action_request(event, server2) {
   check_named_default_separate(actions);
   try {
     const data = await call_action(event, actions);
-    if (false)
-      ;
+    if (false) ;
     if (data instanceof ActionFailure) {
       return {
         type: "failure",
@@ -2414,7 +2395,7 @@ async function handle_action_request(event, server2) {
 function check_named_default_separate(actions) {
   if (actions.default && Object.keys(actions).length > 1) {
     throw new Error(
-      "When using named actions, the default action cannot be used. See the docs for more info: https://kit.svelte.dev/docs/form-actions#named-actions"
+      "When using named actions, the default action cannot be used. See the docs for more info: https://svelte.dev/docs/kit/form-actions#named-actions"
     );
   }
 }
@@ -2459,10 +2440,14 @@ function try_deserialize(data, fn, route_id) {
       /** @type {any} */
       e3
     );
+    if (data instanceof Response) {
+      throw new Error(
+        `Data returned from action inside ${route_id} is not serializable. Form actions need to return plain objects or fail(). E.g. return { success: true } or return fail(400, { message: "invalid" });`
+      );
+    }
     if ("path" in error) {
       let message = `Data returned from action inside ${route_id} is not serializable: ${error.message}`;
-      if (error.path !== "")
-        message += ` (data.${error.path})`;
+      if (error.path !== "") message += ` (data.${error.path})`;
       throw new Error(message);
     }
     throw error;
@@ -2482,8 +2467,7 @@ function b64_encode(buffer) {
   );
 }
 async function load_server_data({ event, state, node, parent }) {
-  if (!node?.server)
-    return null;
+  if (!node?.server) return null;
   let is_tracking = true;
   const uses = {
     dependencies: /* @__PURE__ */ new Set(),
@@ -2689,7 +2673,7 @@ function create_universal_fetch(event, state, fetched, csr, resolve_opts) {
           const included = resolve_opts.filterSerializedResponseHeaders(lower, value);
           if (!included) {
             throw new Error(
-              `Failed to get response header "${lower}" \u2014 it must be included by the \`filterSerializedResponseHeaders\` option: https://kit.svelte.dev/docs/hooks#server-hooks-handle (at ${event.route.id})`
+              `Failed to get response header "${lower}" \u2014 it must be included by the \`filterSerializedResponseHeaders\` option: https://svelte.dev/docs/kit/hooks#Server-hooks-handle (at ${event.route.id})`
             );
           }
         }
@@ -2718,65 +2702,16 @@ async function stream_to_string(stream) {
   }
   return result;
 }
-var subscriber_queue = [];
-function readable(value, start) {
-  return {
-    subscribe: writable(value, start).subscribe
-  };
-}
-function writable(value, start = noop) {
-  let stop;
-  const subscribers = /* @__PURE__ */ new Set();
-  function set(new_value) {
-    if (safe_not_equal(value, new_value)) {
-      value = new_value;
-      if (stop) {
-        const run_queue = !subscriber_queue.length;
-        for (const subscriber of subscribers) {
-          subscriber[1]();
-          subscriber_queue.push(subscriber, value);
-        }
-        if (run_queue) {
-          for (let i = 0; i < subscriber_queue.length; i += 2) {
-            subscriber_queue[i][0](subscriber_queue[i + 1]);
-          }
-          subscriber_queue.length = 0;
-        }
-      }
-    }
-  }
-  function update(fn) {
-    set(fn(value));
-  }
-  function subscribe2(run2, invalidate = noop) {
-    const subscriber = [run2, invalidate];
-    subscribers.add(subscriber);
-    if (subscribers.size === 1) {
-      stop = start(set, update) || noop;
-    }
-    run2(value);
-    return () => {
-      subscribers.delete(subscriber);
-      if (subscribers.size === 0 && stop) {
-        stop();
-        stop = null;
-      }
-    };
-  }
-  return { set, update, subscribe: subscribe2 };
-}
 function hash(...values) {
   let hash2 = 5381;
   for (const value of values) {
     if (typeof value === "string") {
       let i = value.length;
-      while (i)
-        hash2 = hash2 * 33 ^ value.charCodeAt(--i);
+      while (i) hash2 = hash2 * 33 ^ value.charCodeAt(--i);
     } else if (ArrayBuffer.isView(value)) {
       const buffer = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
       let i = buffer.length;
-      while (i)
-        hash2 = hash2 * 33 ^ buffer[--i];
+      while (i) hash2 = hash2 * 33 ^ buffer[--i];
     } else {
       throw new TypeError("value must be a string or TypedArray");
     }
@@ -2816,12 +2751,9 @@ function serialize_data(fetched, filter, prerendering2 = false) {
     if (filter(key2, value)) {
       headers2[key2] = value;
     }
-    if (key2 === "cache-control")
-      cache_control = value;
-    else if (key2 === "age")
-      age = value;
-    else if (key2 === "vary" && value.trim() === "*")
-      varyAny = true;
+    if (key2 === "cache-control") cache_control = value;
+    else if (key2 === "age") age = value;
+    else if (key2 === "vary" && value.trim() === "*") varyAny = true;
   }
   const payload = {
     status: fetched.response.status,
@@ -2860,8 +2792,7 @@ function serialize_data(fetched, filter, prerendering2 = false) {
 var s = JSON.stringify;
 var encoder$2 = new TextEncoder();
 function sha256(data) {
-  if (!key[0])
-    precompute();
+  if (!key[0]) precompute();
   const out = init.slice(0);
   const array2 = encode(data);
   for (let i = 0; i < array2.length; i += 16) {
@@ -3141,8 +3072,7 @@ var BaseProvider = class {
         /** @type {string[] | true} */
         directives[key2]
       );
-      if (!value)
-        continue;
+      if (!value) continue;
       const directive = [key2];
       if (Array.isArray(value)) {
         value.forEach((value2) => {
@@ -3236,8 +3166,7 @@ function create_async_iterator() {
         return {
           next: async () => {
             const next = await deferred[0].promise;
-            if (!next.done)
-              deferred.shift();
+            if (!next.done) deferred.shift();
             return next;
           }
         };
@@ -3337,12 +3266,9 @@ async function render_response({
       }
     }
     for (const { node } of branch) {
-      for (const url of node.imports)
-        modulepreloads.add(url);
-      for (const url of node.stylesheets)
-        stylesheets4.add(url);
-      for (const url of node.fonts)
-        fonts4.add(url);
+      for (const url of node.imports) modulepreloads.add(url);
+      for (const url of node.stylesheets) stylesheets4.add(url);
+      for (const url of node.fonts) fonts4.add(url);
       if (node.inline_styles) {
         Object.entries(await node.inline_styles()).forEach(([k, v]) => inline_styles.set(k, v));
       }
@@ -3364,8 +3290,7 @@ async function render_response({
   if (inline_styles.size > 0) {
     const content = Array.from(inline_styles.values()).join("\n");
     const attributes = [];
-    if (csp.style_needs_nonce)
-      attributes.push(` nonce="${csp.nonce}"`);
+    if (csp.style_needs_nonce) attributes.push(` nonce="${csp.nonce}"`);
     csp.add_style(content);
     head += `
 	<style${attributes.join("")}>${content}</style>`;
@@ -3404,6 +3329,7 @@ async function render_response({
     event,
     options2,
     branch.map((b) => b.server_data),
+    csp,
     global
   );
   if (page_config.ssr && page_config.csr) {
@@ -3586,13 +3512,11 @@ ${indent}}`);
       type: "bytes"
     }),
     {
-      headers: {
-        "content-type": "text/html"
-      }
+      headers: headers2
     }
   );
 }
-function get_data(event, options2, nodes, global) {
+function get_data(event, options2, nodes, csp, global) {
   let promise_id = 1;
   let count = 0;
   const { iterator, push, done } = create_async_iterator();
@@ -3617,7 +3541,7 @@ function get_data(event, options2, nodes, global) {
           let str;
           try {
             str = uneval({ id, data, error }, replacer);
-          } catch (e3) {
+          } catch {
             error = await handle_error_and_jsonify(
               event,
               options2,
@@ -3626,10 +3550,10 @@ function get_data(event, options2, nodes, global) {
             data = void 0;
             str = uneval({ id, data, error }, replacer);
           }
-          push(`<script>${global}.resolve(${str})<\/script>
+          const nonce = csp.script_needs_nonce ? ` nonce="${csp.nonce}"` : "";
+          push(`<script${nonce}>${global}.resolve(${str})<\/script>
 `);
-          if (count === 0)
-            done();
+          if (count === 0) done();
         }
       );
       return `${global}.defer(${id})`;
@@ -3637,8 +3561,7 @@ function get_data(event, options2, nodes, global) {
   }
   try {
     const strings = nodes.map((node) => {
-      if (!node)
-        return "null";
+      if (!node) return "null";
       return `{"type":"data","data":${uneval(node.data, replacer)},${stringify_uses(node)}${node.slash ? `,"slash":${JSON.stringify(node.slash)}` : ""}}`;
     });
     return {
@@ -3694,6 +3617,7 @@ async function respond_with_error({
         event,
         state,
         node: default_layout,
+        // eslint-disable-next-line @typescript-eslint/require-await
         parent: async () => ({})
       });
       const server_data = await server_data_promise;
@@ -3701,6 +3625,7 @@ async function respond_with_error({
         event,
         fetched,
         node: default_layout,
+        // eslint-disable-next-line @typescript-eslint/require-await
         parent: async () => ({}),
         resolve_opts,
         server_data_promise,
@@ -3751,8 +3676,7 @@ function once(fn) {
   let done = false;
   let result;
   return () => {
-    if (done)
-      return result;
+    if (done) return result;
     done = true;
     return result = fn();
   };
@@ -3913,7 +3837,7 @@ function get_data_json(event, options2, nodes) {
             let str;
             try {
               str = stringify(value, reducers);
-            } catch (e3) {
+            } catch {
               const error = await handle_error_and_jsonify(
                 event,
                 options2,
@@ -3925,8 +3849,7 @@ function get_data_json(event, options2, nodes) {
             count -= 1;
             push(`{"type":"chunk","id":${id},"${key2}":${str}}
 `);
-            if (count === 0)
-              done();
+            if (count === 0) done();
           }
         );
         return id;
@@ -3935,8 +3858,7 @@ function get_data_json(event, options2, nodes) {
   };
   try {
     const strings = nodes.map((node) => {
-      if (!node)
-        return "null";
+      if (!node) return "null";
       if (node.type === "error" || node.type === "skip") {
         return JSON.stringify(node);
       }
@@ -4012,6 +3934,7 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
     state.prerender_default = should_prerender;
     const fetched = [];
     if (get_option(nodes, "ssr") === false && !(state.prerendering && should_prerender_data)) {
+      if (DEV && action_result && !event.request.headers.has("x-sveltekit-action")) ;
       return await render_response({
         branch: [],
         fetched,
@@ -4047,8 +3970,7 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
               const data = {};
               for (let j = 0; j < i; j += 1) {
                 const parent = await server_promises[j];
-                if (parent)
-                  Object.assign(data, await parent.data);
+                if (parent) Object.assign(data, parent.data);
               }
               return data;
             }
@@ -4062,8 +3984,7 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
     });
     const csr = get_option(nodes, "csr") ?? true;
     const load_promises = nodes.map((node, i) => {
-      if (load_error)
-        throw load_error;
+      if (load_error) throw load_error;
       return Promise.resolve().then(async () => {
         try {
           return await load_data({
@@ -4089,12 +4010,10 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
         }
       });
     });
-    for (const p of server_promises)
-      p.catch(() => {
-      });
-    for (const p of load_promises)
-      p.catch(() => {
-      });
+    for (const p of server_promises) p.catch(() => {
+    });
+    for (const p of load_promises) p.catch(() => {
+    });
     for (let i = 0; i < nodes.length; i += 1) {
       const node = nodes[i];
       if (node) {
@@ -4127,8 +4046,7 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
               );
               const node2 = await manifest2._.nodes[index4]();
               let j = i;
-              while (!branch[j])
-                j -= 1;
+              while (!branch[j]) j -= 1;
               return await render_response({
                 event,
                 options: options2,
@@ -4211,8 +4129,7 @@ function exec(match, params, matchers) {
       buffered = 0;
     }
     if (value === void 0) {
-      if (param.rest)
-        result[param.name] = "";
+      if (param.rest) result[param.name] = "";
       continue;
     }
     if (!param.matcher || matchers[param.matcher](value)) {
@@ -4233,8 +4150,7 @@ function exec(match, params, matchers) {
     }
     return;
   }
-  if (buffered)
-    return;
+  if (buffered) return;
   return result;
 }
 function validate_options(options2) {
@@ -4322,10 +4238,8 @@ function get_cookies(request, url, trailing_slash) {
     };
     for (const key2 in new_cookies) {
       const cookie = new_cookies[key2];
-      if (!domain_matches(destination.hostname, cookie.options.domain))
-        continue;
-      if (!path_matches(destination.pathname, cookie.options.path))
-        continue;
+      if (!domain_matches(destination.hostname, cookie.options.domain)) continue;
+      if (!path_matches(destination.pathname, cookie.options.path)) continue;
       const encoder2 = cookie.options.encode || encodeURIComponent;
       combined_cookies[cookie.name] = encoder2(cookie.value);
     }
@@ -4347,19 +4261,15 @@ function get_cookies(request, url, trailing_slash) {
   return { cookies, new_cookies, get_cookie_header, set_internal };
 }
 function domain_matches(hostname, constraint) {
-  if (!constraint)
-    return true;
+  if (!constraint) return true;
   const normalized = constraint[0] === "." ? constraint.slice(1) : constraint;
-  if (hostname === normalized)
-    return true;
+  if (hostname === normalized) return true;
   return hostname.endsWith("." + normalized);
 }
 function path_matches(path, constraint) {
-  if (!constraint)
-    return true;
+  if (!constraint) return true;
   const normalized = constraint.endsWith("/") ? constraint.slice(0, -1) : constraint;
-  if (path === normalized)
-    return true;
+  if (path === normalized) return true;
   return path.startsWith(normalized + "/");
 }
 function add_cookies_to_headers(headers2, cookies) {
@@ -4396,8 +4306,7 @@ function create_fetch({ event, options: options2, manifest: manifest2, state, ge
         if (url.origin !== event.url.origin) {
           if (`.${url.hostname}`.endsWith(`.${event.url.hostname}`) && credentials !== "omit") {
             const cookie = get_cookie_header(url, request.headers.get("cookie"));
-            if (cookie)
-              request.headers.set("cookie", cookie);
+            if (cookie) request.headers.set("cookie", cookie);
           }
           return fetch(request);
         }
@@ -4405,14 +4314,23 @@ function create_fetch({ event, options: options2, manifest: manifest2, state, ge
         const decoded = decodeURIComponent(url.pathname);
         const filename = (decoded.startsWith(prefix) ? decoded.slice(prefix.length) : decoded).slice(1);
         const filename_html = `${filename}/index.html`;
-        const is_asset = manifest2.assets.has(filename);
-        const is_asset_html = manifest2.assets.has(filename_html);
+        const is_asset = manifest2.assets.has(filename) || filename in manifest2._.server_assets;
+        const is_asset_html = manifest2.assets.has(filename_html) || filename_html in manifest2._.server_assets;
         if (is_asset || is_asset_html) {
           const file = is_asset ? filename : filename_html;
           if (state.read) {
             const type = is_asset ? manifest2.mimeTypes[filename.slice(filename.lastIndexOf("."))] : "text/html";
             return new Response(state.read(file), {
               headers: type ? { "content-type": type } : {}
+            });
+          } else if (read_implementation && file in manifest2._.server_assets) {
+            const length = manifest2._.server_assets[file];
+            const type = manifest2.mimeTypes[file.slice(file.lastIndexOf("."))];
+            return new Response(read_implementation(file), {
+              headers: {
+                "Content-Length": "" + length,
+                "Content-Type": type
+              }
             });
           }
           return await fetch(request);
@@ -4491,8 +4409,7 @@ function get_public_env(request) {
 function get_page_config(nodes) {
   let current = {};
   for (const node of nodes) {
-    if (!node?.universal?.config && !node?.server?.config)
-      continue;
+    if (!node?.universal?.config && !node?.server?.config) continue;
     current = {
       ...current,
       ...node?.universal?.config,
@@ -4524,7 +4441,7 @@ async function respond(request, options2, manifest2, state) {
   let rerouted_path;
   try {
     rerouted_path = options2.hooks.reroute({ url: new URL(url) }) ?? url.pathname;
-  } catch (e3) {
+  } catch {
     return text("Internal Server Error", {
       status: 500
     });
@@ -4547,7 +4464,9 @@ async function respond(request, options2, manifest2, state) {
     return get_public_env(request);
   }
   if (decoded.startsWith(`/${options2.app_dir}`)) {
-    return text("Not found", { status: 404 });
+    const headers22 = new Headers();
+    headers22.set("cache-control", "public, max-age=0, must-revalidate");
+    return text("Not found", { status: 404, headers: headers22 });
   }
   const is_data_request = has_data_suffix(decoded);
   let invalidated_data_nodes;
@@ -4562,8 +4481,7 @@ async function respond(request, options2, manifest2, state) {
     const matchers = await manifest2._.matchers();
     for (const candidate of manifest2._.routes) {
       const match = candidate.pattern.exec(decoded);
-      if (!match)
-        continue;
+      if (!match) continue;
       const matched = exec(match, candidate.params, matchers);
       if (matched) {
         route = candidate;
@@ -4624,14 +4542,12 @@ async function respond(request, options2, manifest2, state) {
         trailing_slash = "always";
       } else if (route.page) {
         const nodes = await load_page_nodes(route.page, manifest2);
-        if (DEV)
-          ;
+        if (DEV) ;
         trailing_slash = get_option(nodes, "trailingSlash");
       } else if (route.endpoint) {
         const node = await route.endpoint();
         trailing_slash = node.trailingSlash;
-        if (DEV)
-          ;
+        if (DEV) ;
       }
       if (!is_data_request) {
         const normalized = normalize_path(url.pathname, trailing_slash ?? "never");
@@ -4667,6 +4583,11 @@ async function respond(request, options2, manifest2, state) {
           event.platform = await state.emulator.platform({ config, prerender });
         }
       }
+    } else if (state.emulator?.platform) {
+      event.platform = await state.emulator.platform({
+        config: {},
+        prerender: !!state.prerendering?.fallback
+      });
     }
     const { cookies, new_cookies, get_cookie_header, set_internal } = get_cookies(
       request,
@@ -4683,8 +4604,7 @@ async function respond(request, options2, manifest2, state) {
       get_cookie_header,
       set_internal
     });
-    if (state.prerendering && !state.prerendering.fallback)
-      disable_search(url);
+    if (state.prerendering && !state.prerendering.fallback) disable_search(url);
     const response = await options2.hooks.handle({
       event,
       resolve: (event2, opts) => resolve2(event2, opts).then((response2) => {
@@ -4723,8 +4643,7 @@ async function respond(request, options2, manifest2, state) {
           "set-cookie"
         ]) {
           const value = response.headers.get(key2);
-          if (value)
-            headers22.set(key2, value);
+          if (value) headers22.set(key2, value);
         }
         return new Response(void 0, {
           status: 304,
@@ -4926,6 +4845,9 @@ var Server = class {
       prerendering ? new Proxy({ type: "public" }, prerender_env_handler) : public_env2
     );
     set_safe_public_env(public_env2);
+    if (read) {
+      set_read_implementation(read);
+    }
     if (!this.#options.hooks) {
       try {
         const module = await get_hooks();
@@ -4968,7 +4890,7 @@ var manifest = (() => {
     assets: /* @__PURE__ */ new Set(["Ad01.jpg", "AiEmer.jpg", "HTML.webp", "Primechat.jpg", "amazon.jpeg", "amazon.jpg", "d41586-024-02191-1_27293496.jpg", "favicon.png"]),
     mimeTypes: { ".jpg": "image/jpeg", ".webp": "image/webp", ".jpeg": "image/jpeg", ".png": "image/png" },
     _: {
-      client: { "start": "_app/immutable/entry/start.0GTmlCVE.js", "app": "_app/immutable/entry/app.Cx_Qe42z.js", "imports": ["_app/immutable/entry/start.0GTmlCVE.js", "_app/immutable/chunks/entry.xbmA0_Ly.js", "_app/immutable/chunks/scheduler.5rEqcWWW.js", "_app/immutable/entry/app.Cx_Qe42z.js", "_app/immutable/chunks/scheduler.5rEqcWWW.js", "_app/immutable/chunks/index.3m18Cu60.js"], "stylesheets": [], "fonts": [], "uses_env_dynamic_public": false },
+      client: { "start": "_app/immutable/entry/start.DwZE-IK4.js", "app": "_app/immutable/entry/app.CGlvN2py.js", "imports": ["_app/immutable/entry/start.DwZE-IK4.js", "_app/immutable/chunks/entry.Xyt3Gdu4.js", "_app/immutable/chunks/scheduler.DTurKcvQ.js", "_app/immutable/entry/app.CGlvN2py.js", "_app/immutable/chunks/scheduler.DTurKcvQ.js", "_app/immutable/chunks/index.CvJRIlCB.js"], "stylesheets": [], "fonts": [], "uses_env_dynamic_public": false },
       nodes: [
         __memo(() => Promise.resolve().then(() => (init__(), __exports))),
         __memo(() => Promise.resolve().then(() => (init__2(), __exports2))),
@@ -4991,7 +4913,7 @@ var manifest = (() => {
   };
 })();
 var prerendered = /* @__PURE__ */ new Set([]);
-var app_path = "_app";
+var base_path = "";
 
 // .svelte-kit/cloudflare-tmp/_worker.js
 async function e(e3, t2) {
@@ -5005,18 +4927,15 @@ function t(e3, t2, n2, o2) {
 }
 var n = /* @__PURE__ */ new Set([200, 203, 204, 300, 301, 404, 405, 410, 414, 501]);
 function r(e3) {
-  if (!n.has(e3.status))
-    return false;
-  if (~(e3.headers.get("Vary") || "").indexOf("*"))
-    return false;
+  if (!n.has(e3.status)) return false;
+  if (~(e3.headers.get("Vary") || "").indexOf("*")) return false;
   let t2 = e3.headers.get("Cache-Control") || "";
   return !/(private|no-cache|no-store)/i.test(t2);
 }
 function o(n2) {
   return async function(r3, o2) {
     let a = await e(n2, r3);
-    if (a)
-      return a;
+    if (a) return a;
     o2.defer((e3) => {
       t(n2, r3, e3, o2);
     });
@@ -5027,15 +4946,15 @@ var c = t.bind(0, s2);
 var r2 = e.bind(0, s2);
 var e2 = o.bind(0, s2);
 var server = new Server(manifest);
-var immutable = `/${app_path}/immutable/`;
-var version_file = `/${app_path}/version.json`;
+var app_path = `/${manifest.appPath}`;
+var immutable = `${app_path}/immutable/`;
+var version_file = `${app_path}/version.json`;
 var worker = {
   async fetch(req, env, context) {
     await server.init({ env });
     let pragma = req.headers.get("cache-control") || "";
     let res = !pragma.includes("no-cache") && await r2(req);
-    if (res)
-      return res;
+    if (res) return res;
     let { pathname, search } = new URL(req.url);
     try {
       pathname = decodeURIComponent(pathname);
@@ -5043,16 +4962,15 @@ var worker = {
     }
     const stripped_pathname = pathname.replace(/\/$/, "");
     let is_static_asset = false;
-    const filename = stripped_pathname.substring(1);
+    const filename = stripped_pathname.slice(base_path.length + 1);
     if (filename) {
-      is_static_asset = manifest.assets.has(filename) || manifest.assets.has(filename + "/index.html");
+      is_static_asset = manifest.assets.has(filename) || manifest.assets.has(filename + "/index.html") || filename in manifest._.server_assets || filename + "/index.html" in manifest._.server_assets;
     }
     let location = pathname.at(-1) === "/" ? stripped_pathname : pathname + "/";
     if (is_static_asset || prerendered.has(pathname) || pathname === version_file || pathname.startsWith(immutable)) {
       res = await env.ASSETS.fetch(req);
     } else if (location && prerendered.has(location)) {
-      if (search)
-        location += search;
+      if (search) location += search;
       res = new Response("", {
         status: 308,
         headers: {

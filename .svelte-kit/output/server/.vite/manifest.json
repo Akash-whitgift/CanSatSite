@@ -19,6 +19,13 @@
     "file": "chunks/exports.js",
     "name": "exports"
   },
+  "_index.js": {
+    "file": "chunks/index.js",
+    "name": "index",
+    "imports": [
+      "_ssr.js"
+    ]
+  },
   "_internal.js": {
     "file": "chunks/internal.js",
     "name": "internal",
@@ -30,20 +37,20 @@
     "file": "chunks/ssr.js",
     "name": "ssr"
   },
-  "node_modules/@sveltejs/kit/src/runtime/components/error.svelte": {
+  "node_modules/@sveltejs/kit/src/runtime/components/svelte-4/error.svelte": {
     "file": "entries/fallbacks/error.svelte.js",
     "name": "entries/fallbacks/error.svelte",
-    "src": "node_modules/@sveltejs/kit/src/runtime/components/error.svelte",
+    "src": "node_modules/@sveltejs/kit/src/runtime/components/svelte-4/error.svelte",
     "isEntry": true,
     "imports": [
       "_ssr.js",
       "_client.js"
     ]
   },
-  "node_modules/@sveltejs/kit/src/runtime/components/layout.svelte": {
+  "node_modules/@sveltejs/kit/src/runtime/components/svelte-4/layout.svelte": {
     "file": "entries/fallbacks/layout.svelte.js",
     "name": "entries/fallbacks/layout.svelte",
-    "src": "node_modules/@sveltejs/kit/src/runtime/components/layout.svelte",
+    "src": "node_modules/@sveltejs/kit/src/runtime/components/svelte-4/layout.svelte",
     "isEntry": true,
     "imports": [
       "_ssr.js"
@@ -57,7 +64,7 @@
     "imports": [
       "_internal.js",
       "_exports.js",
-      "_ssr.js"
+      "_index.js"
     ]
   },
   "src/routes/+page.svelte": {
@@ -67,10 +74,11 @@
     "isEntry": true,
     "imports": [
       "_ssr.js",
-      "_client.js"
+      "_client.js",
+      "_index.js"
     ],
     "css": [
-      "_app/immutable/assets/_page.CuGOiBhg.css"
+      "_app/immutable/assets/_page.Cju36GS4.css"
     ]
   }
 }
