@@ -161,38 +161,32 @@ for (const image of track.getElementsByClassName("image")) {
 
       <InstructionCard on:dismiss={dismissInstructions} />
     {/if}
-  <div class="image-container" on:click={(event) => openModal('modal1', event)}>
-    <img class="image" src="/d41586-024-02191-1_27293496.jpg" draggable="false" data-active />
-    <div class="text-overlay">Engineering</div>  <!-- Change title here -->
+    <div class="image-container" on:click={(event) => openModal('modal1', event)}>
+      <img class="image" src="/d41586-024-02191-1_27293496.jpg" draggable="false" data-active />
+      <div class="text-overlay"><span>Engineering</span></div>  <!-- Change title here -->
   </div>
   <div class="image-container" on:click={(event) => openModal('modal2', event)}>
     <img class="image" src="/Ad01.jpg" draggable="false" data-active />
-    <div class="text-overlay">Sample</div>
+    <div class="text-overlay"><span>Sample</span></div>
   </div>
   <div class="image-container " on:click={(event) => openModal('modal3', event)}>
     <img class="image darker" src="/HTML.webp" draggable="false" data-active />
-    <div class="text-overlay">Sample</div>
+    <div class="text-overlay"><span>Sample</span></div>
   </div>
   <div class="image-container" on:click={(event) => openModal('modal4', event)}>
     <img class="image" src="/AiEmer.jpg" draggable="false" data-active />
-    <div class="text-overlay">Sample</div>
+    <div class="text-overlay"><span>Sample</span></div>
   </div>
   <div class="image-container" on:click={(event) => openModal('modal5', event)}>
     <img class="image darker" src="/amazon.jpeg" draggable="false" data-active />
-    <div class="text-overlay">Sample</div>
+    <div class="text-overlay"><span>Sample</span></div>
   </div>
 </div>
 
+<!-- Add the following CSS -->
 <style>
-
-  .text-overlay {
-    overflow: hidden;
-  }
-  .darker {
-    filter: brightness(0.7);
-  }
-
-  </style>
+  
+</style>
 {#if isModalOpen}
 <Modal id={currentModalId} onClose={closeModal} dimensions={modalDimensions} />
 {/if}

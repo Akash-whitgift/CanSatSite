@@ -138,34 +138,44 @@ body {
     .image-container:hover > .image {
       filter: brightness(40%);
     }
-    .image-container:hover .text-overlay {
-      transform: scale(1.75);
-      color: 	#ff4d00;
-      align-self: center; /* Center vertically */
-      justify-self: center; /* Center horizontally */
-  
-    }
-
-   
-  
-    
     .text-overlay {
-  position: absolute; /* Overlay on top of the image */
-  bottom: 10%; /* Start from bottom-left */
-  left: 10%;
-  color: white;
-  font-size: 2em;
-  padding: 10px;
-  border-radius: 5px;
-  transform-origin: bottom left; /* Start scaling from bottom-left */
-  transition: transform 0.3s ease, color 0.3s ease, background-color 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 200;
-  font-family: "futura-pt-bold", -apple-system, system-ui, BlinkMacSystemFont,helvectica;
-}
+      position: absolute;
+      bottom: 10%; 
+      left: 10%;
+      font-size: 2em;
+      padding: 10px;
+      border-radius: 5px;
+      transform-origin: bottom left; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 200;
+      font-family: "futura-pt-bold", -apple-system, system-ui, BlinkMacSystemFont, helvetica;
+      overflow: hidden;
+      transition: 700ms;
+    }
+  
+    .text-overlay span {
+    position: relative;
+    background: linear-gradient(45deg, white 50%, 	#ff4d00 50%);
+    background-size: 200% 200%;
+    background-position: 0% 75%; /* Start with white text */
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    transition: background-position 700ms;
     
+  }
+  
+  .image-container:hover .text-overlay span {
+    background-position: 100% 0%; /* Animate to orange */
+    
+  }
+  .image-container:hover > .text-overlay {
+    transform: scale(1.5);
+    transition: 700ms;
+    transition-delay: 350ms;
+  }
     .text-overlay h1 {
       font-size: 1em;
     }
