@@ -223,36 +223,26 @@
   <div class="image-container interactable" data-type="link" on:click={(event) => openModal('modal1', event)}>
     <img class="image" src="/d41586-024-02191-1_27293496.jpg" draggable="false" data-active />
     <div class="text-overlay"><span>Engineering</span></div>
-    <!-- Remove the arrow icon from individual interactable elements -->
-    <!-- <FontAwesomeIcon icon={faArrowUpRightFromSquare} class="arrow-icon" /> -->
   </div>
   
   <div class="image-container interactable" data-type="link" on:click={(event) => openModal('modal2', event)}>
     <img class="image" src="Satellite Building.png" draggable="false" data-active />
     <div class="text-overlay"><span>Mission Goals</span></div>
-    <!-- Remove the arrow icon from individual interactable elements -->
-    <!-- <FontAwesomeIcon icon={faArrowUpRightFromSquare} class="arrow-icon" /> -->
   </div>
   
   <div class="image-container interactable" data-type="link" on:click={(event) => openModal('modal3', event)}>
     <img class="image" src="Uses of Satellites.jpg" draggable="false" data-active />
     <div class="text-overlay"><span>Uses of Satellites</span></div>
-    <!-- Remove the arrow icon from individual interactable elements -->
-    <!-- <FontAwesomeIcon icon={faArrowUpRightFromSquare} class="arrow-icon" /> -->
   </div>
   
   <div class="image-container interactable" data-type="link" on:click={(event) => openModal('modal4', event)}>
     <img class="image" src="Satellite Launch.jpeg" draggable="false" data-active />
-    <div class="text-overlay"><span>Launch and Deployment</span></div>
-    <!-- Remove the arrow icon from individual interactable elements -->
-    <!-- <FontAwesomeIcon icon={faArrowUpRightFromSquare} class="arrow-icon" /> -->
+    <div class="text-overlay"><span>Launch and<br>Deployment</span></div>
   </div>
   
   <div class="image-container interactable" data-type="link" on:click={(event) => openModal('modal5', event)}>
     <img class="image darker" src="Data Analysis.png" draggable="false" data-active />
     <div class="text-overlay"><span>Data Analysis</span></div>
-    <!-- Remove the arrow icon from individual interactable elements -->
-    <!-- <FontAwesomeIcon icon={faArrowUpRightFromSquare} class="arrow-icon" /> -->
   </div>
 </div>
 

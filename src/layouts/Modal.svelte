@@ -24,14 +24,14 @@
         <h2> The Design Process</h2>
         <p> Our Design Process consists of 5 stages: </p>
         <ol>
-          <li> Research </li>
-          <li> Design </li>
-          <li> Prototype </li>
-          <li> Test </li>
-          <li> Launch </li>
+          <li> Research - Gather information on similar CANSAT designs and study requirements for temperature, pressure, and altitude measurements. </li>
+          <li> Design - Sketch and plan the satellite’s structure, layout, and materials, focusing on durability, weight, and sensor placement. </li>
+          <li> Prototype - Build an initial model of the CANSAT to test design concepts and ensure all components fit and function as planned. </li>
+          <li> Test - Run ground and flight tests to assess performance, identifying any issues with data collection or deployment mechanisms. </li>
+          <li> Launch - Launch the satellite and collect data </li>
         </ol>
       </section>
-      
+      <p data-type='exit' class='interactable'>Created bt Arjun</p>
 
 <style>
   a {
@@ -46,37 +46,65 @@
       image: "/d41586-024-02191-1_27293496.jpg"
     },
     modal2: {
-      title: 'Sample',
+      title: 'Mission Goals',
       content: `
-      <h2>Sample</h2>
-    <p>Sample</p>
+  <section>
+    <h2>The objectives of our CANSAT Mission</h2>
+    <p>Our CANSAT mission focuses on capturing environmental data, focussing
+    on temperature, atmospheric pressure and altitude.</p>
+    <ol>
+     <li>A barometric pressure sensor will record pressure levels as the CANSAT moves through different layers of the atmosphere. Pressure generally decreases with altitude, and by measuring this gradient, we can accurately determine the altitude of the CANSAT. </li>
+     <li>Altitude can be determined by combining data from a barometric pressure sensor, which measures atmospheric pressure changes with height, and a GPS module for precise positional data.</li>
+    </ol>
+  </section>
+  <p data-type='exit' class='interactable'>Created by Arjun</p>
+    
       `,
-      image: "/Ad01.jpg"
+      image: "Satellite Building.png"
     },
     modal3: {
-      title: 'Sample',
+      title: 'Uses of Satellites',
       content: `
-
-     <h2>Sample</h2>
-    <p>Sample</p>
+      <section>
+     <h2>What do humans use satellites for?</h2>
+     <uol>
+       <li>Communication: Satellites enable global connectivity, allowing for phone calls, internet access, and television broadcasts even in remote or rural areas by relaying signals across vast distances.</li>
+       <li>Weather Monitoring and Climate Study: Satellites provide real-time data on weather patterns, storms, and temperature trends, helping meteorologists forecast weather and scientists monitor climate change and environmental conditions over time.</li>
+       <li>Navigation and GPS: Satellites are essential for the Global Positioning System (GPS), guiding navigation for vehicles, aircraft, ships, and personal devices, which is crucial for transportation, logistics, and personal travel.</li>
+     </uol>
+    <p data-type='exit' class='interactable'>Created by Arjun</p>
       `,
-      image: "/HTML.webp"
+      image: "Uses of Satellites.jpg"
     },
     modal4: {
-      title: 'Sample',
+      title: 'Launch and Deployment',
       content: `
-     <h2>Sample</h2>
-    <p>Sample</p>
+      <section>
+     <h2>How are we going to Launch our Satellite?</h2>
+     <uol>
+      <li>Launch Mechanism: Our CANSAT will be launched via a small rocket or high-altitude balloon, which will carry it to the desired altitude before deployment. This launch method ensures the CANSAT reaches a high enough point to simulate the descent phase of an actual satellite.</li>
+      <li>Deployment Sequence: Once the CANSAT reaches its target altitude, it will be released from the rocket or balloon and begin its descent. During this phase, an automated system will activate sensors and data collection modules, ensuring data is captured from the start of the descent.</li>
+      <li>Parachute Activation: To control its descent speed and ensure a safe landing, the CANSAT will deploy a small parachute at a specific altitude. This controlled descent allows the satellite to collect data at various atmospheric layers, maximizing the quality and quantity of information we gather.</li>
+     </uol>
+    </section>
+    <p data-type='exit' class='interactable'>Created by Arjun</p>
       `,
-      image: "/AiEmer.jpg"
+      image: "Satellite Launch.jpeg"
     },
     modal5: {
-      title: 'Sample',
+      title: 'Data Analysis',
       content: `
-      <h2>Sample</h2>
-    <p>Sample</p>
+      <section>
+      <h2>What will we do once we have the data?</h2>
+      <uol>
+       <li>Data Processing: After retrieval, we will process the collected data by organizing it into readable formats, such as tables and graphs, to visualize temperature, pressure, and altitude changes during the descent, making patterns easier to analyse.</li>
+       <li>Analysis and Interpretation: Using data analysis techniques, we’ll interpret the trends and compare our findings with expected atmospheric models, assessing any anomalies and understanding how each parameter varies with altitude.</li>
+       <li>Reporting and Improvement: We’ll compile our findings into a comprehensive report, highlighting key insights and any unexpected results, and use these conclusions to refine our engineering design, sensor calibration, and deployment process for future missions.</li>
+      </uol>
+    </section>
+     <p data-type='exit' class='interactable'>Created by Arjun</p>
       `,
-      image: "/amazon.jpeg"
+      image: "Data Analysis.png"
     }
   };
 
@@ -158,7 +186,7 @@ function scrollToSection(id) {
 >
   <div class="modal-image"></div>
   <div class='modal-content'>
-    <span class="close interactable" id='closecross' data-type="close" on:click={handleClose}>&times;</span>
+    <span class="close interactable" id='closecross' data-type="exit" on:click={handleClose}>&times;</span>
     <div class="modal-text">
       {#if modalsData[id].image}
       <div class="cover-image-container">
