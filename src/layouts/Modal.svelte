@@ -158,7 +158,7 @@ function scrollToSection(id) {
 >
   <div class="modal-image"></div>
   <div class='modal-content'>
-    <span class="close" id='closecross' on:click={handleClose}>&times;</span>
+    <span class="close interactable" id='closecross' data-type="close" on:click={handleClose}>&times;</span>
     <div class="modal-text">
       {#if modalsData[id].image}
       <div class="cover-image-container">

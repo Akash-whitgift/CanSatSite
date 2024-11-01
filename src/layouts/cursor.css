@@ -1,0 +1,69 @@
+/* cursor.css */
+
+/* Existing styles */
+#trailer {
+    height: 20px;
+    width: 20px;
+    background-color: white;
+    border-radius: 20px;
+    
+    position: fixed;
+    left: 0px;
+    top: 0px;
+    z-index: 10000;
+    
+    pointer-events: none;
+    opacity: 1; /* Initially hidden */
+    transition: opacity 500ms ease, transform 0.15s ease;
+    transition: 300ms;
+    display: grid;
+    place-items: center;
+  }
+  
+  /* Make trailer visible only when data-type is "link" */
+  #trailer[data-type="link"] {
+    opacity: 1;
+    height: 70px;
+    width: 70px;
+    transition: 300ms;
+    border-radius: 100%;
+  }
+  #trailer[data-type="video"] {
+    opacity: 1;
+    height: 70px;
+    width: 70px;
+    transition: 300ms;
+    border-radius: 100%;
+  }
+  #trailer[data-type="exit"] {
+    opacity: 1;
+    height: 70px;
+    width: 70px;
+    transition: 300ms;
+    border-radius: 100%;
+  }
+  /* Control the visibility of the trailer icon */
+  #trailer-icon {
+    font-size: 6px;
+    line-height: 4px;
+    
+    opacity: 1; /* Visible when data-type is "link" */
+    transition: opacity 400ms ease;
+  }
+  
+  /* Interactable elements */
+  .interactable {
+    /* aspect-ratio: 1 / 1.5;
+    width: clamp(120px, 40vmin, 600px);
+    background-position: center 50%;
+    background-size: 100%;  
+    */
+    opacity: 1;
+    
+    transition: background-size 400ms ease, opacity 400ms ease;
+  }
+  
+  .interactable:hover {
+    background-size: 105%;
+    opacity: 1;
+  }

@@ -111,7 +111,7 @@ body {
     }
 
     .image-container {
-      width: 60vmin;
+      width: 60vmin !important;
       height: 76vmin;
       position: relative;
       display: flex;
