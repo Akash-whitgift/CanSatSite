@@ -186,7 +186,7 @@ function scrollToSection(id) {
 >
   <div class="modal-image"></div>
   <div class='modal-content'>
-    <span class="close interactable" id='closecross' data-type="exit" on:click={handleClose}>&times;</span>
+    <span class="close interactable" id='closecross' data-type="exit" on:click={handleClose}> &times;</span>
     <div class="modal-text">
       {#if modalsData[id].image}
       <div class="cover-image-container">
@@ -227,6 +227,7 @@ function scrollToSection(id) {
   height: 100%;
   object-fit: cover;
   object-position: center;
+  filter: brightness(70%)
 }
   .modal-content {
     display: flex;
@@ -285,7 +286,7 @@ function scrollToSection(id) {
   }
 
   .close {
-    color: #aaa;
+    color: #fff;
     float: right;
     font-size: 28px;
     font-weight: bold;

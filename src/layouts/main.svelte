@@ -1,4 +1,3 @@
-<!-- main.svelte -->
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
@@ -21,6 +20,9 @@
   let isMobile = false;
   let modalDimensions = null;
   const isBrowser = typeof window !== 'undefined';
+  let isLoading = true; // Add loading state variable
+  let progress = 0; // Add progress state variable
+  let showLoadingScreen = true; // Add variable to control loading screen visibility
   
   // Initialize trailerIcon as null
   let trailerIcon = null;
@@ -200,6 +202,17 @@
       trailer = document.getElementById("trailer");
 
       window.addEventListener('mousemove', moveCursor);
+
+      // Simulate progress
+      const interval = setInterval(() => {
+        progress += 10;
+        if (progress >= 100) {
+          clearInterval(interval);
+          setTimeout(() => {
+            isLoading = false;
+          }, 500); // Ensure loading screen shows for at least 500ms
+        }
+      }, 50);
     });
 
     onDestroy(() => {
@@ -212,9 +225,23 @@
       window.removeEventListener('mousemove', moveCursor);
     });
   }
-</script>
+  
+  $: if (!isLoading) {
+    document.getElementById('loading-screen').classList.add('fade-out');
+  }
 
-<div id="image-track">
+  function handleTransitionEnd() {
+    showLoadingScreen = false;
+  }
+</script>
+{#if showLoadingScreen}
+  <div id="loading-screen" class:isLoading={isLoading} on:transitionend={handleTransitionEnd}>
+    Loading...
+    <div id="progress-bar" style="width: {progress}%;"></div>
+  </div>
+{/if}
+
+<div id="image-track" class:isLoading={!isLoading}>
   {#if showInstructions}
     <InstructionCard on:dismiss={dismissInstructions} />
   {/if}
@@ -258,6 +285,8 @@
   .image-container {
     position: relative;
   }
+
+  
 </style>
 
 {#if isModalOpen}
