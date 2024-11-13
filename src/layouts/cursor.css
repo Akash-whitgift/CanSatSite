@@ -67,3 +67,23 @@
     background-size: 105%;
     opacity: 1;
   }
+
+@media (hover: none) and (pointer: coarse) {
+  #trailer {
+    display: none; /* Hide custom cursor on touch devices */
+  }
+
+  .interactable {
+    cursor: pointer; /* Use default touch behavior */
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  #trailer {
+    display: none; /* Hide custom cursor on touch devices */
+  }
+
+  .interactable {
+    cursor: pointer; /* Use default touch behavior */
+  }
+}

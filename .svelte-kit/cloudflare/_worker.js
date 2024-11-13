@@ -50,8 +50,8 @@ function blank_object() {
 function run_all(fns) {
   fns.forEach(run);
 }
-function safe_not_equal(a, b) {
-  return a != a ? b == b : a !== b || a && typeof a === "object" || typeof a === "function";
+function safe_not_equal(a2, b) {
+  return a2 != a2 ? b == b : a2 !== b || a2 && typeof a2 === "object" || typeof a2 === "function";
 }
 function subscribe(store, ...callbacks) {
   if (store == null) {
@@ -62,6 +62,12 @@ function subscribe(store, ...callbacks) {
   }
   const unsub = store.subscribe(...callbacks);
   return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
+}
+function compute_rest_props(props, keys) {
+  const rest = {};
+  keys = new Set(keys);
+  for (const k in props) if (!keys.has(k) && k[0] !== "$") rest[k] = props[k];
+  return rest;
 }
 function custom_event(type, detail, { bubbles = false, cancelable = false } = {}) {
   return new CustomEvent(type, { detail, bubbles, cancelable });
@@ -116,6 +122,71 @@ function escape(value, is_attr = false) {
   }
   return escaped2 + str.substring(last);
 }
+function spread(args, attrs_to_add) {
+  const attributes = Object.assign({}, ...args);
+  if (attrs_to_add) {
+    const classes_to_add = attrs_to_add.classes;
+    const styles_to_add = attrs_to_add.styles;
+    if (classes_to_add) {
+      if (attributes.class == null) {
+        attributes.class = classes_to_add;
+      } else {
+        attributes.class += " " + classes_to_add;
+      }
+    }
+    if (styles_to_add) {
+      if (attributes.style == null) {
+        attributes.style = style_object_to_string(styles_to_add);
+      } else {
+        attributes.style = style_object_to_string(
+          merge_ssr_styles(attributes.style, styles_to_add)
+        );
+      }
+    }
+  }
+  let str = "";
+  Object.keys(attributes).forEach((name) => {
+    if (invalid_attribute_name_character.test(name)) return;
+    const value = attributes[name];
+    if (value === true) str += " " + name;
+    else if (boolean_attributes.has(name.toLowerCase())) {
+      if (value) str += " " + name;
+    } else if (value != null) {
+      str += ` ${name}="${value}"`;
+    }
+  });
+  return str;
+}
+function merge_ssr_styles(style_attribute, style_directive) {
+  const style_object = {};
+  for (const individual_style of style_attribute.split(";")) {
+    const colon_index = individual_style.indexOf(":");
+    const name = individual_style.slice(0, colon_index).trim();
+    const value = individual_style.slice(colon_index + 1).trim();
+    if (!name) continue;
+    style_object[name] = value;
+  }
+  for (const name in style_directive) {
+    const value = style_directive[name];
+    if (value) {
+      style_object[name] = value;
+    } else {
+      delete style_object[name];
+    }
+  }
+  return style_object;
+}
+function escape_attribute_value(value) {
+  const should_escape = typeof value === "string" || value && typeof value === "object";
+  return should_escape ? escape(value, true) : value;
+}
+function escape_object(obj) {
+  const result = {};
+  for (const key2 in obj) {
+    result[key2] = escape_attribute_value(obj[key2]);
+  }
+  return result;
+}
 function validate_component(component4, name) {
   if (!component4 || !component4.$$render) {
     if (name === "svelte:component") name += " this={...}";
@@ -151,7 +222,7 @@ function create_ssr_component(fn) {
       return {
         html,
         css: {
-          code: Array.from(result.css).map((css2) => css2.code).join("\n"),
+          code: Array.from(result.css).map((css3) => css3.code).join("\n"),
           map: null
           // TODO
         },
@@ -166,12 +237,48 @@ function add_attribute(name, value, boolean) {
   const assignment = `="${escape(value, true)}"`;
   return ` ${name}${assignment}`;
 }
-var identity, current_component, ATTR_REGEX, CONTENT_REGEX, missing_component, on_destroy;
+function add_classes(classes) {
+  return classes ? ` class="${classes}"` : "";
+}
+function style_object_to_string(style_object) {
+  return Object.keys(style_object).filter((key2) => style_object[key2] != null && style_object[key2] !== "").map((key2) => `${key2}: ${escape_attribute_value(style_object[key2])};`).join(" ");
+}
+var identity, current_component, _boolean_attributes, boolean_attributes, ATTR_REGEX, CONTENT_REGEX, invalid_attribute_name_character, missing_component, on_destroy;
 var init_ssr = __esm({
   ".svelte-kit/output/server/chunks/ssr.js"() {
     identity = (x) => x;
+    _boolean_attributes = /** @type {const} */
+    [
+      "allowfullscreen",
+      "allowpaymentrequest",
+      "async",
+      "autofocus",
+      "autoplay",
+      "checked",
+      "controls",
+      "default",
+      "defer",
+      "disabled",
+      "formnovalidate",
+      "hidden",
+      "inert",
+      "ismap",
+      "loop",
+      "multiple",
+      "muted",
+      "nomodule",
+      "novalidate",
+      "open",
+      "playsinline",
+      "readonly",
+      "required",
+      "reversed",
+      "selected"
+    ];
+    boolean_attributes = /* @__PURE__ */ new Set([..._boolean_attributes]);
     ATTR_REGEX = /[&"<]/g;
     CONTENT_REGEX = /[&<]/g;
+    invalid_attribute_name_character = /[\s'">/=\u{FDD0}-\u{FDEF}\u{FFFE}\u{FFFF}\u{1FFFE}\u{1FFFF}\u{2FFFE}\u{2FFFF}\u{3FFFE}\u{3FFFF}\u{4FFFE}\u{4FFFF}\u{5FFFE}\u{5FFFF}\u{6FFFE}\u{6FFFF}\u{7FFFE}\u{7FFFF}\u{8FFFE}\u{8FFFF}\u{9FFFE}\u{9FFFF}\u{AFFFE}\u{AFFFF}\u{BFFFE}\u{BFFFF}\u{CFFFE}\u{CFFFF}\u{DFFFE}\u{DFFFF}\u{EFFFE}\u{EFFFF}\u{FFFFE}\u{FFFFF}\u{10FFFE}\u{10FFFF}]/u;
     missing_component = {
       $$render: () => ""
     };
@@ -424,11 +531,11 @@ var init_chunks = __esm({
 var require_cookie = __commonJS({
   "node_modules/cookie/index.js"(exports) {
     "use strict";
-    exports.parse = parse2;
+    exports.parse = parse3;
     exports.serialize = serialize2;
     var __toString = Object.prototype.toString;
     var fieldContentRegExp = /^[\u0009\u0020-\u007e\u0080-\u00ff]+$/;
-    function parse2(str, options2) {
+    function parse3(str, options2) {
       if (typeof str !== "string") {
         throw new TypeError("argument str must be a string");
       }
@@ -628,7 +735,7 @@ var require_set_cookie = __commonJS({
       }
       return { name, value };
     }
-    function parse2(input, options2) {
+    function parse3(input, options2) {
       options2 = options2 ? Object.assign({}, defaultParseOptions, options2) : defaultParseOptions;
       if (!input) {
         if (!options2.map) {
@@ -726,8 +833,8 @@ var require_set_cookie = __commonJS({
       }
       return cookiesStrings;
     }
-    module.exports = parse2;
-    module.exports.parse = parse2;
+    module.exports = parse3;
+    module.exports.parse = parse3;
     module.exports.parseString = parseString2;
     module.exports.splitCookiesString = splitCookiesString2;
   }
@@ -762,16 +869,16 @@ var init__ = __esm({
   ".svelte-kit/output/server/nodes/0.js"() {
     index = 0;
     component = async () => component_cache ??= (await Promise.resolve().then(() => (init_layout_svelte(), layout_svelte_exports))).default;
-    imports = ["_app/immutable/nodes/0.UtFmvbLQ.js", "_app/immutable/chunks/scheduler.DTurKcvQ.js", "_app/immutable/chunks/index.CvJRIlCB.js"];
+    imports = ["_app/immutable/nodes/0.QbHOYBhi.js", "_app/immutable/chunks/scheduler.DvBSSsau.js", "_app/immutable/chunks/index.DFh_30bs.js"];
     stylesheets = [];
     fonts = [];
   }
 });
 
 // .svelte-kit/output/server/chunks/client.js
-function get(key2, parse2 = JSON.parse) {
+function get(key2, parse3 = JSON.parse) {
   try {
-    return parse2(sessionStorage[key2]);
+    return parse3(sessionStorage[key2]);
   } catch {
   }
 }
@@ -845,9 +952,2746 @@ var init__2 = __esm({
   ".svelte-kit/output/server/nodes/1.js"() {
     index2 = 1;
     component2 = async () => component_cache2 ??= (await Promise.resolve().then(() => (init_error_svelte(), error_svelte_exports))).default;
-    imports2 = ["_app/immutable/nodes/1.B_Fl4tyl.js", "_app/immutable/chunks/scheduler.DTurKcvQ.js", "_app/immutable/chunks/index.CvJRIlCB.js", "_app/immutable/chunks/entry.Xyt3Gdu4.js"];
+    imports2 = ["_app/immutable/nodes/1.BxxEr2Gr.js", "_app/immutable/chunks/scheduler.DvBSSsau.js", "_app/immutable/chunks/index.DFh_30bs.js", "_app/immutable/chunks/entry.ynT9Tddq.js"];
     stylesheets2 = [];
     fonts2 = [];
+  }
+});
+
+// node_modules/@fortawesome/free-solid-svg-icons/index.mjs
+var faRightToBracket, faArrowUpRightFromSquare, faPlay;
+var init_free_solid_svg_icons = __esm({
+  "node_modules/@fortawesome/free-solid-svg-icons/index.mjs"() {
+    faRightToBracket = {
+      prefix: "fas",
+      iconName: "right-to-bracket",
+      icon: [512, 512, ["sign-in-alt"], "f2f6", "M217.9 105.9L340.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L217.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1L32 320c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM352 416l64 0c17.7 0 32-14.3 32-32l0-256c0-17.7-14.3-32-32-32l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c53 0 96 43 96 96l0 256c0 53-43 96-96 96l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32z"]
+    };
+    faArrowUpRightFromSquare = {
+      prefix: "fas",
+      iconName: "arrow-up-right-from-square",
+      icon: [512, 512, ["external-link"], "f08e", "M320 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l82.7 0L201.4 265.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L448 109.3l0 82.7c0 17.7 14.3 32 32 32s32-14.3 32-32l0-160c0-17.7-14.3-32-32-32L320 0zM80 32C35.8 32 0 67.8 0 112L0 432c0 44.2 35.8 80 80 80l320 0c44.2 0 80-35.8 80-80l0-112c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 112c0 8.8-7.2 16-16 16L80 448c-8.8 0-16-7.2-16-16l0-320c0-8.8 7.2-16 16-16l112 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L80 32z"]
+    };
+    faPlay = {
+      prefix: "fas",
+      iconName: "play",
+      icon: [384, 512, [9654], "f04b", "M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80L0 432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"]
+    };
+  }
+});
+
+// node_modules/@fortawesome/fontawesome-svg-core/index.mjs
+function familyProxy(obj) {
+  return new Proxy(obj, {
+    get(target, prop) {
+      return prop in target ? target[prop] : target[a];
+    }
+  });
+}
+function getAttrConfig(attr) {
+  var element = DOCUMENT.querySelector("script[" + attr + "]");
+  if (element) {
+    return element.getAttribute(attr);
+  }
+}
+function coerce(val) {
+  if (val === "") return true;
+  if (val === "false") return false;
+  if (val === "true") return true;
+  return val;
+}
+function onChange(cb) {
+  _onChangeCb.push(cb);
+  return () => {
+    _onChangeCb.splice(_onChangeCb.indexOf(cb), 1);
+  };
+}
+function insertCss(css3) {
+  if (!css3 || !IS_DOM) {
+    return;
+  }
+  const style = DOCUMENT.createElement("style");
+  style.setAttribute("type", "text/css");
+  style.innerHTML = css3;
+  const headChildren = DOCUMENT.head.childNodes;
+  let beforeChild = null;
+  for (let i = headChildren.length - 1; i > -1; i--) {
+    const child = headChildren[i];
+    const tagName = (child.tagName || "").toUpperCase();
+    if (["STYLE", "LINK"].indexOf(tagName) > -1) {
+      beforeChild = child;
+    }
+  }
+  DOCUMENT.head.insertBefore(style, beforeChild);
+  return css3;
+}
+function nextUniqueId() {
+  let size = 12;
+  let id = "";
+  while (size-- > 0) {
+    id += idPool[Math.random() * 62 | 0];
+  }
+  return id;
+}
+function toArray(obj) {
+  const array2 = [];
+  for (let i = (obj || []).length >>> 0; i--; ) {
+    array2[i] = obj[i];
+  }
+  return array2;
+}
+function classArray(node) {
+  if (node.classList) {
+    return toArray(node.classList);
+  } else {
+    return (node.getAttribute("class") || "").split(" ").filter((i) => i);
+  }
+}
+function htmlEscape(str) {
+  return "".concat(str).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function joinAttributes(attributes) {
+  return Object.keys(attributes || {}).reduce((acc, attributeName) => {
+    return acc + "".concat(attributeName, '="').concat(htmlEscape(attributes[attributeName]), '" ');
+  }, "").trim();
+}
+function joinStyles(styles2) {
+  return Object.keys(styles2 || {}).reduce((acc, styleName) => {
+    return acc + "".concat(styleName, ": ").concat(styles2[styleName].trim(), ";");
+  }, "");
+}
+function transformIsMeaningful(transform) {
+  return transform.size !== meaninglessTransform.size || transform.x !== meaninglessTransform.x || transform.y !== meaninglessTransform.y || transform.rotate !== meaninglessTransform.rotate || transform.flipX || transform.flipY;
+}
+function transformForSvg(_ref) {
+  let {
+    transform,
+    containerWidth,
+    iconWidth
+  } = _ref;
+  const outer = {
+    transform: "translate(".concat(containerWidth / 2, " 256)")
+  };
+  const innerTranslate = "translate(".concat(transform.x * 32, ", ").concat(transform.y * 32, ") ");
+  const innerScale = "scale(".concat(transform.size / 16 * (transform.flipX ? -1 : 1), ", ").concat(transform.size / 16 * (transform.flipY ? -1 : 1), ") ");
+  const innerRotate = "rotate(".concat(transform.rotate, " 0 0)");
+  const inner = {
+    transform: "".concat(innerTranslate, " ").concat(innerScale, " ").concat(innerRotate)
+  };
+  const path = {
+    transform: "translate(".concat(iconWidth / 2 * -1, " -256)")
+  };
+  return {
+    outer,
+    inner,
+    path
+  };
+}
+function transformForCss(_ref2) {
+  let {
+    transform,
+    width = UNITS_IN_GRID,
+    height = UNITS_IN_GRID,
+    startCentered = false
+  } = _ref2;
+  let val = "";
+  if (startCentered && IS_IE) {
+    val += "translate(".concat(transform.x / d$2 - width / 2, "em, ").concat(transform.y / d$2 - height / 2, "em) ");
+  } else if (startCentered) {
+    val += "translate(calc(-50% + ".concat(transform.x / d$2, "em), calc(-50% + ").concat(transform.y / d$2, "em)) ");
+  } else {
+    val += "translate(".concat(transform.x / d$2, "em, ").concat(transform.y / d$2, "em) ");
+  }
+  val += "scale(".concat(transform.size / d$2 * (transform.flipX ? -1 : 1), ", ").concat(transform.size / d$2 * (transform.flipY ? -1 : 1), ") ");
+  val += "rotate(".concat(transform.rotate, "deg) ");
+  return val;
+}
+function css() {
+  const dcp = DEFAULT_CSS_PREFIX;
+  const drc = DEFAULT_REPLACEMENT_CLASS;
+  const fp = config.cssPrefix;
+  const rc = config.replacementClass;
+  let s3 = baseStyles;
+  if (fp !== dcp || rc !== drc) {
+    const dPatt = new RegExp("\\.".concat(dcp, "\\-"), "g");
+    const customPropPatt = new RegExp("\\--".concat(dcp, "\\-"), "g");
+    const rPatt = new RegExp("\\.".concat(drc), "g");
+    s3 = s3.replace(dPatt, ".".concat(fp, "-")).replace(customPropPatt, "--".concat(fp, "-")).replace(rPatt, ".".concat(rc));
+  }
+  return s3;
+}
+function ensureCss() {
+  if (config.autoAddCss && !_cssInserted) {
+    insertCss(css());
+    _cssInserted = true;
+  }
+}
+function domready(fn) {
+  if (!IS_DOM) return;
+  loaded ? setTimeout(fn, 0) : functions.push(fn);
+}
+function toHtml(abstractNodes) {
+  const {
+    tag,
+    attributes = {},
+    children = []
+  } = abstractNodes;
+  if (typeof abstractNodes === "string") {
+    return htmlEscape(abstractNodes);
+  } else {
+    return "<".concat(tag, " ").concat(joinAttributes(attributes), ">").concat(children.map(toHtml).join(""), "</").concat(tag, ">");
+  }
+}
+function iconFromMapping(mapping, prefix, iconName) {
+  if (mapping && mapping[prefix] && mapping[prefix][iconName]) {
+    return {
+      prefix,
+      iconName,
+      icon: mapping[prefix][iconName]
+    };
+  }
+}
+function ucs2decode(string) {
+  const output = [];
+  let counter2 = 0;
+  const length = string.length;
+  while (counter2 < length) {
+    const value = string.charCodeAt(counter2++);
+    if (value >= 55296 && value <= 56319 && counter2 < length) {
+      const extra = string.charCodeAt(counter2++);
+      if ((extra & 64512) == 56320) {
+        output.push(((value & 1023) << 10) + (extra & 1023) + 65536);
+      } else {
+        output.push(value);
+        counter2--;
+      }
+    } else {
+      output.push(value);
+    }
+  }
+  return output;
+}
+function toHex(unicode) {
+  const decoded = ucs2decode(unicode);
+  return decoded.length === 1 ? decoded[0].toString(16) : null;
+}
+function codePointAt(string, index4) {
+  const size = string.length;
+  let first = string.charCodeAt(index4);
+  let second;
+  if (first >= 55296 && first <= 56319 && size > index4 + 1) {
+    second = string.charCodeAt(index4 + 1);
+    if (second >= 56320 && second <= 57343) {
+      return (first - 55296) * 1024 + second - 56320 + 65536;
+    }
+  }
+  return first;
+}
+function normalizeIcons(icons) {
+  return Object.keys(icons).reduce((acc, iconName) => {
+    const icon2 = icons[iconName];
+    const expanded = !!icon2.icon;
+    if (expanded) {
+      acc[icon2.iconName] = icon2.icon;
+    } else {
+      acc[iconName] = icon2;
+    }
+    return acc;
+  }, {});
+}
+function defineIcons(prefix, icons) {
+  let params = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : {};
+  const {
+    skipHooks = false
+  } = params;
+  const normalized = normalizeIcons(icons);
+  if (typeof namespace.hooks.addPack === "function" && !skipHooks) {
+    namespace.hooks.addPack(prefix, normalizeIcons(icons));
+  } else {
+    namespace.styles[prefix] = {
+      ...namespace.styles[prefix] || {},
+      ...normalized
+    };
+  }
+  if (prefix === "fas") {
+    defineIcons("fa", icons);
+  }
+}
+function isReserved(name) {
+  return ~RESERVED_CLASSES.indexOf(name);
+}
+function getIconName(cssPrefix, cls) {
+  const parts = cls.split("-");
+  const prefix = parts[0];
+  const iconName = parts.slice(1).join("-");
+  if (prefix === cssPrefix && iconName !== "" && !isReserved(iconName)) {
+    return iconName;
+  } else {
+    return null;
+  }
+}
+function byUnicode(prefix, unicode) {
+  return (_byUnicode[prefix] || {})[unicode];
+}
+function byLigature(prefix, ligature) {
+  return (_byLigature[prefix] || {})[ligature];
+}
+function byAlias(prefix, alias) {
+  return (_byAlias[prefix] || {})[alias];
+}
+function byOldName(name) {
+  return _byOldName[name] || {
+    prefix: null,
+    iconName: null
+  };
+}
+function byOldUnicode(unicode) {
+  const oldUnicode = _byOldUnicode[unicode];
+  const newUnicode = byUnicode("fas", unicode);
+  return oldUnicode || (newUnicode ? {
+    prefix: "fas",
+    iconName: newUnicode
+  } : null) || {
+    prefix: null,
+    iconName: null
+  };
+}
+function getDefaultUsablePrefix() {
+  return _defaultUsablePrefix;
+}
+function getCanonicalPrefix(styleOrPrefix) {
+  let params = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+  const {
+    family = a
+  } = params;
+  const style = PREFIX_TO_STYLE[family][styleOrPrefix];
+  const prefix = STYLE_TO_PREFIX[family][styleOrPrefix] || STYLE_TO_PREFIX[family][style];
+  const defined = styleOrPrefix in namespace.styles ? styleOrPrefix : null;
+  const result = prefix || defined || null;
+  return result;
+}
+function getCanonicalIcon(values) {
+  let params = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+  const {
+    skipLookups = false
+  } = params;
+  const famProps = {
+    [a]: "".concat(config.cssPrefix, "-").concat(a),
+    [r]: "".concat(config.cssPrefix, "-").concat(r),
+    [o]: "".concat(config.cssPrefix, "-").concat(o)
+  };
+  let givenPrefix = null;
+  let family = a;
+  const nonDuotoneFamilyIds = c.filter((familyId) => familyId !== t);
+  nonDuotoneFamilyIds.forEach((familyId) => {
+    if (values.includes(famProps[familyId]) || values.some((v$$1) => PREFIXES_FOR_FAMILY[familyId].includes(v$$1))) {
+      family = familyId;
+    }
+  });
+  const canonical = values.reduce((acc, cls) => {
+    const iconName = getIconName(config.cssPrefix, cls);
+    if (styles[cls]) {
+      cls = LONG_STYLE[family].includes(cls) ? LONG_STYLE_TO_PREFIX[family][cls] : cls;
+      givenPrefix = cls;
+      acc.prefix = cls;
+    } else if (PREFIXES[family].indexOf(cls) > -1) {
+      givenPrefix = cls;
+      acc.prefix = getCanonicalPrefix(cls, {
+        family
+      });
+    } else if (iconName) {
+      acc.iconName = iconName;
+    } else if (cls !== config.replacementClass && !nonDuotoneFamilyIds.some((familyName) => cls === famProps[familyName])) {
+      acc.rest.push(cls);
+    }
+    if (!skipLookups && acc.prefix && acc.iconName) {
+      const shim = givenPrefix === "fa" ? byOldName(acc.iconName) : {};
+      const aliasIconName = byAlias(acc.prefix, acc.iconName);
+      if (shim.prefix) {
+        givenPrefix = null;
+      }
+      acc.iconName = shim.iconName || aliasIconName || acc.iconName;
+      acc.prefix = shim.prefix || acc.prefix;
+      if (acc.prefix === "far" && !styles["far"] && styles["fas"] && !config.autoFetchSvg) {
+        acc.prefix = "fas";
+      }
+    }
+    return acc;
+  }, emptyCanonicalIcon());
+  if (values.includes("fa-brands") || values.includes("fab")) {
+    canonical.prefix = "fab";
+  }
+  if (values.includes("fa-duotone") || values.includes("fad")) {
+    canonical.prefix = "fad";
+  }
+  if (!canonical.prefix && family === r && (styles["fass"] || config.autoFetchSvg)) {
+    canonical.prefix = "fass";
+    canonical.iconName = byAlias(canonical.prefix, canonical.iconName) || canonical.iconName;
+  }
+  if (!canonical.prefix && family === o && (styles["fasds"] || config.autoFetchSvg)) {
+    canonical.prefix = "fasds";
+    canonical.iconName = byAlias(canonical.prefix, canonical.iconName) || canonical.iconName;
+  }
+  if (canonical.prefix === "fa" || givenPrefix === "fa") {
+    canonical.prefix = getDefaultUsablePrefix() || "fas";
+  }
+  return canonical;
+}
+function registerPlugins(nextPlugins, _ref) {
+  let {
+    mixoutsTo: obj
+  } = _ref;
+  _plugins = nextPlugins;
+  _hooks = {};
+  Object.keys(providers).forEach((k) => {
+    if (defaultProviderKeys.indexOf(k) === -1) {
+      delete providers[k];
+    }
+  });
+  _plugins.forEach((plugin) => {
+    const mixout = plugin.mixout ? plugin.mixout() : {};
+    Object.keys(mixout).forEach((tk) => {
+      if (typeof mixout[tk] === "function") {
+        obj[tk] = mixout[tk];
+      }
+      if (typeof mixout[tk] === "object") {
+        Object.keys(mixout[tk]).forEach((sk) => {
+          if (!obj[tk]) {
+            obj[tk] = {};
+          }
+          obj[tk][sk] = mixout[tk][sk];
+        });
+      }
+    });
+    if (plugin.hooks) {
+      const hooks = plugin.hooks();
+      Object.keys(hooks).forEach((hook) => {
+        if (!_hooks[hook]) {
+          _hooks[hook] = [];
+        }
+        _hooks[hook].push(hooks[hook]);
+      });
+    }
+    if (plugin.provides) {
+      plugin.provides(providers);
+    }
+  });
+  return obj;
+}
+function chainHooks(hook, accumulator) {
+  for (var _len = arguments.length, args = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+    args[_key - 2] = arguments[_key];
+  }
+  const hookFns = _hooks[hook] || [];
+  hookFns.forEach((hookFn) => {
+    accumulator = hookFn.apply(null, [accumulator, ...args]);
+  });
+  return accumulator;
+}
+function callHooks(hook) {
+  for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+    args[_key2 - 1] = arguments[_key2];
+  }
+  const hookFns = _hooks[hook] || [];
+  hookFns.forEach((hookFn) => {
+    hookFn.apply(null, args);
+  });
+  return void 0;
+}
+function callProvided() {
+  const hook = arguments[0];
+  const args = Array.prototype.slice.call(arguments, 1);
+  return providers[hook] ? providers[hook].apply(null, args) : void 0;
+}
+function findIconDefinition(iconLookup) {
+  if (iconLookup.prefix === "fa") {
+    iconLookup.prefix = "fas";
+  }
+  let {
+    iconName
+  } = iconLookup;
+  const prefix = iconLookup.prefix || getDefaultUsablePrefix();
+  if (!iconName) return;
+  iconName = byAlias(prefix, iconName) || iconName;
+  return iconFromMapping(library.definitions, prefix, iconName) || iconFromMapping(namespace.styles, prefix, iconName);
+}
+function domVariants(val, abstractCreator) {
+  Object.defineProperty(val, "abstract", {
+    get: abstractCreator
+  });
+  Object.defineProperty(val, "html", {
+    get: function() {
+      return val.abstract.map((a2) => toHtml(a2));
+    }
+  });
+  Object.defineProperty(val, "node", {
+    get: function() {
+      if (!IS_DOM) return;
+      const container = DOCUMENT.createElement("div");
+      container.innerHTML = val.html;
+      return container.children;
+    }
+  });
+  return val;
+}
+function asIcon(_ref) {
+  let {
+    children,
+    main,
+    mask,
+    attributes,
+    styles: styles2,
+    transform
+  } = _ref;
+  if (transformIsMeaningful(transform) && main.found && !mask.found) {
+    const {
+      width,
+      height
+    } = main;
+    const offset = {
+      x: width / height / 2,
+      y: 0.5
+    };
+    attributes["style"] = joinStyles({
+      ...styles2,
+      "transform-origin": "".concat(offset.x + transform.x / 16, "em ").concat(offset.y + transform.y / 16, "em")
+    });
+  }
+  return [{
+    tag: "svg",
+    attributes,
+    children
+  }];
+}
+function asSymbol(_ref) {
+  let {
+    prefix,
+    iconName,
+    children,
+    attributes,
+    symbol
+  } = _ref;
+  const id = symbol === true ? "".concat(prefix, "-").concat(config.cssPrefix, "-").concat(iconName) : symbol;
+  return [{
+    tag: "svg",
+    attributes: {
+      style: "display: none;"
+    },
+    children: [{
+      tag: "symbol",
+      attributes: {
+        ...attributes,
+        id
+      },
+      children
+    }]
+  }];
+}
+function makeInlineSvgAbstract(params) {
+  const {
+    icons: {
+      main,
+      mask
+    },
+    prefix,
+    iconName,
+    transform,
+    symbol,
+    title,
+    maskId,
+    titleId,
+    extra,
+    watchable = false
+  } = params;
+  const {
+    width,
+    height
+  } = mask.found ? mask : main;
+  const isUploadedIcon = prefix === "fak";
+  const attrClass = [config.replacementClass, iconName ? "".concat(config.cssPrefix, "-").concat(iconName) : ""].filter((c3) => extra.classes.indexOf(c3) === -1).filter((c3) => c3 !== "" || !!c3).concat(extra.classes).join(" ");
+  let content = {
+    children: [],
+    attributes: {
+      ...extra.attributes,
+      "data-prefix": prefix,
+      "data-icon": iconName,
+      "class": attrClass,
+      "role": extra.attributes.role || "img",
+      "xmlns": "http://www.w3.org/2000/svg",
+      "viewBox": "0 0 ".concat(width, " ").concat(height)
+    }
+  };
+  const uploadedIconWidthStyle = isUploadedIcon && !~extra.classes.indexOf("fa-fw") ? {
+    width: "".concat(width / height * 16 * 0.0625, "em")
+  } : {};
+  if (watchable) {
+    content.attributes[DATA_FA_I2SVG] = "";
+  }
+  if (title) {
+    content.children.push({
+      tag: "title",
+      attributes: {
+        id: content.attributes["aria-labelledby"] || "title-".concat(titleId || nextUniqueId())
+      },
+      children: [title]
+    });
+    delete content.attributes.title;
+  }
+  const args = {
+    ...content,
+    prefix,
+    iconName,
+    main,
+    mask,
+    maskId,
+    transform,
+    symbol,
+    styles: {
+      ...uploadedIconWidthStyle,
+      ...extra.styles
+    }
+  };
+  const {
+    children,
+    attributes
+  } = mask.found && main.found ? callProvided("generateAbstractMask", args) || {
+    children: [],
+    attributes: {}
+  } : callProvided("generateAbstractIcon", args) || {
+    children: [],
+    attributes: {}
+  };
+  args.children = children;
+  args.attributes = attributes;
+  if (symbol) {
+    return asSymbol(args);
+  } else {
+    return asIcon(args);
+  }
+}
+function makeLayersTextAbstract(params) {
+  const {
+    content,
+    width,
+    height,
+    transform,
+    title,
+    extra,
+    watchable = false
+  } = params;
+  const attributes = {
+    ...extra.attributes,
+    ...title ? {
+      "title": title
+    } : {},
+    "class": extra.classes.join(" ")
+  };
+  if (watchable) {
+    attributes[DATA_FA_I2SVG] = "";
+  }
+  const styles2 = {
+    ...extra.styles
+  };
+  if (transformIsMeaningful(transform)) {
+    styles2["transform"] = transformForCss({
+      transform,
+      startCentered: true,
+      width,
+      height
+    });
+    styles2["-webkit-transform"] = styles2["transform"];
+  }
+  const styleString = joinStyles(styles2);
+  if (styleString.length > 0) {
+    attributes["style"] = styleString;
+  }
+  const val = [];
+  val.push({
+    tag: "span",
+    attributes,
+    children: [content]
+  });
+  if (title) {
+    val.push({
+      tag: "span",
+      attributes: {
+        class: "sr-only"
+      },
+      children: [title]
+    });
+  }
+  return val;
+}
+function makeLayersCounterAbstract(params) {
+  const {
+    content,
+    title,
+    extra
+  } = params;
+  const attributes = {
+    ...extra.attributes,
+    ...title ? {
+      "title": title
+    } : {},
+    "class": extra.classes.join(" ")
+  };
+  const styleString = joinStyles(extra.styles);
+  if (styleString.length > 0) {
+    attributes["style"] = styleString;
+  }
+  const val = [];
+  val.push({
+    tag: "span",
+    attributes,
+    children: [content]
+  });
+  if (title) {
+    val.push({
+      tag: "span",
+      attributes: {
+        class: "sr-only"
+      },
+      children: [title]
+    });
+  }
+  return val;
+}
+function asFoundIcon(icon2) {
+  const width = icon2[0];
+  const height = icon2[1];
+  const [vectorData] = icon2.slice(4);
+  let element = null;
+  if (Array.isArray(vectorData)) {
+    element = {
+      tag: "g",
+      attributes: {
+        class: "".concat(config.cssPrefix, "-").concat(DUOTONE_CLASSES.GROUP)
+      },
+      children: [{
+        tag: "path",
+        attributes: {
+          class: "".concat(config.cssPrefix, "-").concat(DUOTONE_CLASSES.SECONDARY),
+          fill: "currentColor",
+          d: vectorData[0]
+        }
+      }, {
+        tag: "path",
+        attributes: {
+          class: "".concat(config.cssPrefix, "-").concat(DUOTONE_CLASSES.PRIMARY),
+          fill: "currentColor",
+          d: vectorData[1]
+        }
+      }]
+    };
+  } else {
+    element = {
+      tag: "path",
+      attributes: {
+        fill: "currentColor",
+        d: vectorData
+      }
+    };
+  }
+  return {
+    found: true,
+    width,
+    height,
+    icon: element
+  };
+}
+function maybeNotifyMissing(iconName, prefix) {
+  if (!PRODUCTION && !config.showMissingIcons && iconName) {
+    console.error('Icon with name "'.concat(iconName, '" and prefix "').concat(prefix, '" is missing.'));
+  }
+}
+function findIcon(iconName, prefix) {
+  let givenPrefix = prefix;
+  if (prefix === "fa" && config.styleDefault !== null) {
+    prefix = getDefaultUsablePrefix();
+  }
+  return new Promise((resolve2, reject) => {
+    if (givenPrefix === "fa") {
+      const shim = byOldName(iconName) || {};
+      iconName = shim.iconName || iconName;
+      prefix = shim.prefix || prefix;
+    }
+    if (iconName && prefix && styles$1[prefix] && styles$1[prefix][iconName]) {
+      const icon2 = styles$1[prefix][iconName];
+      return resolve2(asFoundIcon(icon2));
+    }
+    maybeNotifyMissing(iconName, prefix);
+    resolve2({
+      ...missingIconResolutionMixin,
+      icon: config.showMissingIcons && iconName ? callProvided("missingIconAbstract") || {} : {}
+    });
+  });
+}
+function isWatched(node) {
+  const i2svg = node.getAttribute ? node.getAttribute(DATA_FA_I2SVG) : null;
+  return typeof i2svg === "string";
+}
+function hasPrefixAndIcon(node) {
+  const prefix = node.getAttribute ? node.getAttribute(DATA_PREFIX) : null;
+  const icon2 = node.getAttribute ? node.getAttribute(DATA_ICON) : null;
+  return prefix && icon2;
+}
+function hasBeenReplaced(node) {
+  return node && node.classList && node.classList.contains && node.classList.contains(config.replacementClass);
+}
+function getMutator() {
+  if (config.autoReplaceSvg === true) {
+    return mutators.replace;
+  }
+  const mutator = mutators[config.autoReplaceSvg];
+  return mutator || mutators.replace;
+}
+function createElementNS(tag) {
+  return DOCUMENT.createElementNS("http://www.w3.org/2000/svg", tag);
+}
+function createElement(tag) {
+  return DOCUMENT.createElement(tag);
+}
+function convertSVG(abstractObj) {
+  let params = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+  const {
+    ceFn = abstractObj.tag === "svg" ? createElementNS : createElement
+  } = params;
+  if (typeof abstractObj === "string") {
+    return DOCUMENT.createTextNode(abstractObj);
+  }
+  const tag = ceFn(abstractObj.tag);
+  Object.keys(abstractObj.attributes || []).forEach(function(key2) {
+    tag.setAttribute(key2, abstractObj.attributes[key2]);
+  });
+  const children = abstractObj.children || [];
+  children.forEach(function(child) {
+    tag.appendChild(convertSVG(child, {
+      ceFn
+    }));
+  });
+  return tag;
+}
+function nodeAsComment(node) {
+  let comment = " ".concat(node.outerHTML, " ");
+  comment = "".concat(comment, "Font Awesome fontawesome.com ");
+  return comment;
+}
+function performOperationSync(op) {
+  op();
+}
+function perform(mutations, callback) {
+  const callbackFunction = typeof callback === "function" ? callback : noop$2;
+  if (mutations.length === 0) {
+    callbackFunction();
+  } else {
+    let frame = performOperationSync;
+    if (config.mutateApproach === MUTATION_APPROACH_ASYNC) {
+      frame = WINDOW.requestAnimationFrame || performOperationSync;
+    }
+    frame(() => {
+      const mutator = getMutator();
+      const mark = perf.begin("mutate");
+      mutations.map(mutator);
+      mark();
+      callbackFunction();
+    });
+  }
+}
+function disableObservation() {
+  disabled = true;
+}
+function enableObservation() {
+  disabled = false;
+}
+function observe(options2) {
+  if (!MUTATION_OBSERVER) {
+    return;
+  }
+  if (!config.observeMutations) {
+    return;
+  }
+  const {
+    treeCallback = noop$2,
+    nodeCallback = noop$2,
+    pseudoElementsCallback = noop$2,
+    observeMutationsRoot = DOCUMENT
+  } = options2;
+  mo$1 = new MUTATION_OBSERVER((objects) => {
+    if (disabled) return;
+    const defaultPrefix = getDefaultUsablePrefix();
+    toArray(objects).forEach((mutationRecord) => {
+      if (mutationRecord.type === "childList" && mutationRecord.addedNodes.length > 0 && !isWatched(mutationRecord.addedNodes[0])) {
+        if (config.searchPseudoElements) {
+          pseudoElementsCallback(mutationRecord.target);
+        }
+        treeCallback(mutationRecord.target);
+      }
+      if (mutationRecord.type === "attributes" && mutationRecord.target.parentNode && config.searchPseudoElements) {
+        pseudoElementsCallback(mutationRecord.target.parentNode);
+      }
+      if (mutationRecord.type === "attributes" && isWatched(mutationRecord.target) && ~ATTRIBUTES_WATCHED_FOR_MUTATION.indexOf(mutationRecord.attributeName)) {
+        if (mutationRecord.attributeName === "class" && hasPrefixAndIcon(mutationRecord.target)) {
+          const {
+            prefix,
+            iconName
+          } = getCanonicalIcon(classArray(mutationRecord.target));
+          mutationRecord.target.setAttribute(DATA_PREFIX, prefix || defaultPrefix);
+          if (iconName) mutationRecord.target.setAttribute(DATA_ICON, iconName);
+        } else if (hasBeenReplaced(mutationRecord.target)) {
+          nodeCallback(mutationRecord.target);
+        }
+      }
+    });
+  });
+  if (!IS_DOM) return;
+  mo$1.observe(observeMutationsRoot, {
+    childList: true,
+    attributes: true,
+    characterData: true,
+    subtree: true
+  });
+}
+function disconnect() {
+  if (!mo$1) return;
+  mo$1.disconnect();
+}
+function styleParser(node) {
+  const style = node.getAttribute("style");
+  let val = [];
+  if (style) {
+    val = style.split(";").reduce((acc, style2) => {
+      const styles2 = style2.split(":");
+      const prop = styles2[0];
+      const value = styles2.slice(1);
+      if (prop && value.length > 0) {
+        acc[prop] = value.join(":").trim();
+      }
+      return acc;
+    }, {});
+  }
+  return val;
+}
+function classParser(node) {
+  const existingPrefix = node.getAttribute("data-prefix");
+  const existingIconName = node.getAttribute("data-icon");
+  const innerText = node.innerText !== void 0 ? node.innerText.trim() : "";
+  let val = getCanonicalIcon(classArray(node));
+  if (!val.prefix) {
+    val.prefix = getDefaultUsablePrefix();
+  }
+  if (existingPrefix && existingIconName) {
+    val.prefix = existingPrefix;
+    val.iconName = existingIconName;
+  }
+  if (val.iconName && val.prefix) {
+    return val;
+  }
+  if (val.prefix && innerText.length > 0) {
+    val.iconName = byLigature(val.prefix, node.innerText) || byUnicode(val.prefix, toHex(node.innerText));
+  }
+  if (!val.iconName && config.autoFetchSvg && node.firstChild && node.firstChild.nodeType === Node.TEXT_NODE) {
+    val.iconName = node.firstChild.data;
+  }
+  return val;
+}
+function attributesParser(node) {
+  const extraAttributes = toArray(node.attributes).reduce((acc, attr) => {
+    if (acc.name !== "class" && acc.name !== "style") {
+      acc[attr.name] = attr.value;
+    }
+    return acc;
+  }, {});
+  const title = node.getAttribute("title");
+  const titleId = node.getAttribute("data-fa-title-id");
+  if (config.autoA11y) {
+    if (title) {
+      extraAttributes["aria-labelledby"] = "".concat(config.replacementClass, "-title-").concat(titleId || nextUniqueId());
+    } else {
+      extraAttributes["aria-hidden"] = "true";
+      extraAttributes["focusable"] = "false";
+    }
+  }
+  return extraAttributes;
+}
+function blankMeta() {
+  return {
+    iconName: null,
+    title: null,
+    titleId: null,
+    prefix: null,
+    transform: meaninglessTransform,
+    symbol: false,
+    mask: {
+      iconName: null,
+      prefix: null,
+      rest: []
+    },
+    maskId: null,
+    extra: {
+      classes: [],
+      styles: {},
+      attributes: {}
+    }
+  };
+}
+function parseMeta(node) {
+  let parser = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {
+    styleParser: true
+  };
+  const {
+    iconName,
+    prefix,
+    rest: extraClasses
+  } = classParser(node);
+  const extraAttributes = attributesParser(node);
+  const pluginMeta = chainHooks("parseNodeAttributes", {}, node);
+  let extraStyles = parser.styleParser ? styleParser(node) : [];
+  return {
+    iconName,
+    title: node.getAttribute("title"),
+    titleId: node.getAttribute("data-fa-title-id"),
+    prefix,
+    transform: meaninglessTransform,
+    mask: {
+      iconName: null,
+      prefix: null,
+      rest: []
+    },
+    maskId: null,
+    symbol: false,
+    extra: {
+      classes: extraClasses,
+      styles: extraStyles,
+      attributes: extraAttributes
+    },
+    ...pluginMeta
+  };
+}
+function generateMutation(node) {
+  const nodeMeta = config.autoReplaceSvg === "nest" ? parseMeta(node, {
+    styleParser: false
+  }) : parseMeta(node);
+  if (~nodeMeta.extra.classes.indexOf(LAYERS_TEXT_CLASSNAME)) {
+    return callProvided("generateLayersText", node, nodeMeta);
+  } else {
+    return callProvided("generateSvgReplacementMutation", node, nodeMeta);
+  }
+}
+function onTree(root) {
+  let callback = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : null;
+  if (!IS_DOM) return Promise.resolve();
+  const htmlClassList = DOCUMENT.documentElement.classList;
+  const hclAdd = (suffix) => htmlClassList.add("".concat(HTML_CLASS_I2SVG_BASE_CLASS, "-").concat(suffix));
+  const hclRemove = (suffix) => htmlClassList.remove("".concat(HTML_CLASS_I2SVG_BASE_CLASS, "-").concat(suffix));
+  const prefixes2 = config.autoFetchSvg ? knownPrefixes : FAMILIES.map((f$$1) => "fa-".concat(f$$1)).concat(Object.keys(styles$2));
+  if (!prefixes2.includes("fa")) {
+    prefixes2.push("fa");
+  }
+  const prefixesDomQuery = [".".concat(LAYERS_TEXT_CLASSNAME, ":not([").concat(DATA_FA_I2SVG, "])")].concat(prefixes2.map((p$$1) => ".".concat(p$$1, ":not([").concat(DATA_FA_I2SVG, "])"))).join(", ");
+  if (prefixesDomQuery.length === 0) {
+    return Promise.resolve();
+  }
+  let candidates = [];
+  try {
+    candidates = toArray(root.querySelectorAll(prefixesDomQuery));
+  } catch (e$$1) {
+  }
+  if (candidates.length > 0) {
+    hclAdd("pending");
+    hclRemove("complete");
+  } else {
+    return Promise.resolve();
+  }
+  const mark = perf.begin("onTree");
+  const mutations = candidates.reduce((acc, node) => {
+    try {
+      const mutation = generateMutation(node);
+      if (mutation) {
+        acc.push(mutation);
+      }
+    } catch (e$$1) {
+      if (!PRODUCTION) {
+        if (e$$1.name === "MissingIcon") {
+          console.error(e$$1);
+        }
+      }
+    }
+    return acc;
+  }, []);
+  return new Promise((resolve2, reject) => {
+    Promise.all(mutations).then((resolvedMutations) => {
+      perform(resolvedMutations, () => {
+        hclAdd("active");
+        hclAdd("complete");
+        hclRemove("pending");
+        if (typeof callback === "function") callback();
+        mark();
+        resolve2();
+      });
+    }).catch((e$$1) => {
+      mark();
+      reject(e$$1);
+    });
+  });
+}
+function onNode(node) {
+  let callback = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : null;
+  generateMutation(node).then((mutation) => {
+    if (mutation) {
+      perform([mutation], callback);
+    }
+  });
+}
+function resolveIcons(next) {
+  return function(maybeIconDefinition) {
+    let params = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+    const iconDefinition = (maybeIconDefinition || {}).icon ? maybeIconDefinition : findIconDefinition(maybeIconDefinition || {});
+    let {
+      mask
+    } = params;
+    if (mask) {
+      mask = (mask || {}).icon ? mask : findIconDefinition(mask || {});
+    }
+    return next(iconDefinition, {
+      ...params,
+      mask
+    });
+  };
+}
+function hexValueFromContent(content) {
+  const cleaned = content.replace(CLEAN_CONTENT_PATTERN, "");
+  const codePoint = codePointAt(cleaned, 0);
+  const isPrependTen = codePoint >= SECONDARY_UNICODE_RANGE[0] && codePoint <= SECONDARY_UNICODE_RANGE[1];
+  const isDoubled = cleaned.length === 2 ? cleaned[0] === cleaned[1] : false;
+  return {
+    value: isDoubled ? toHex(cleaned[0]) : toHex(cleaned),
+    isSecondary: isPrependTen || isDoubled
+  };
+}
+function getPrefix(fontFamily, fontWeight) {
+  const fontFamilySanitized = fontFamily.replace(/^['"]|['"]$/g, "").toLowerCase();
+  const fontWeightInteger = parseInt(fontWeight);
+  const fontWeightSanitized = isNaN(fontWeightInteger) ? "normal" : fontWeightInteger;
+  return (FONT_FAMILY_WEIGHT_TO_PREFIX[fontFamilySanitized] || {})[fontWeightSanitized] || FONT_FAMILY_WEIGHT_FALLBACK[fontFamilySanitized];
+}
+function replaceForPosition(node, position) {
+  const pendingAttribute = "".concat(DATA_FA_PSEUDO_ELEMENT_PENDING).concat(position.replace(":", "-"));
+  return new Promise((resolve2, reject) => {
+    if (node.getAttribute(pendingAttribute) !== null) {
+      return resolve2();
+    }
+    const children = toArray(node.children);
+    const alreadyProcessedPseudoElement = children.filter((c3) => c3.getAttribute(DATA_FA_PSEUDO_ELEMENT) === position)[0];
+    const styles2 = WINDOW.getComputedStyle(node, position);
+    const fontFamily = styles2.getPropertyValue("font-family");
+    const fontFamilyMatch = fontFamily.match(FONT_FAMILY_PATTERN);
+    const fontWeight = styles2.getPropertyValue("font-weight");
+    const content = styles2.getPropertyValue("content");
+    if (alreadyProcessedPseudoElement && !fontFamilyMatch) {
+      node.removeChild(alreadyProcessedPseudoElement);
+      return resolve2();
+    } else if (fontFamilyMatch && content !== "none" && content !== "") {
+      const content2 = styles2.getPropertyValue("content");
+      let prefix = getPrefix(fontFamily, fontWeight);
+      const {
+        value: hexValue,
+        isSecondary
+      } = hexValueFromContent(content2);
+      const isV4 = fontFamilyMatch[0].startsWith("FontAwesome");
+      let iconName = byUnicode(prefix, hexValue);
+      let iconIdentifier = iconName;
+      if (isV4) {
+        const iconName4 = byOldUnicode(hexValue);
+        if (iconName4.iconName && iconName4.prefix) {
+          iconName = iconName4.iconName;
+          prefix = iconName4.prefix;
+        }
+      }
+      if (iconName && !isSecondary && (!alreadyProcessedPseudoElement || alreadyProcessedPseudoElement.getAttribute(DATA_PREFIX) !== prefix || alreadyProcessedPseudoElement.getAttribute(DATA_ICON) !== iconIdentifier)) {
+        node.setAttribute(pendingAttribute, iconIdentifier);
+        if (alreadyProcessedPseudoElement) {
+          node.removeChild(alreadyProcessedPseudoElement);
+        }
+        const meta = blankMeta();
+        const {
+          extra
+        } = meta;
+        extra.attributes[DATA_FA_PSEUDO_ELEMENT] = position;
+        findIcon(iconName, prefix).then((main) => {
+          const abstract = makeInlineSvgAbstract({
+            ...meta,
+            icons: {
+              main,
+              mask: emptyCanonicalIcon()
+            },
+            prefix,
+            iconName: iconIdentifier,
+            extra,
+            watchable: true
+          });
+          const element = DOCUMENT.createElementNS("http://www.w3.org/2000/svg", "svg");
+          if (position === "::before") {
+            node.insertBefore(element, node.firstChild);
+          } else {
+            node.appendChild(element);
+          }
+          element.outerHTML = abstract.map((a2) => toHtml(a2)).join("\n");
+          node.removeAttribute(pendingAttribute);
+          resolve2();
+        }).catch(reject);
+      } else {
+        resolve2();
+      }
+    } else {
+      resolve2();
+    }
+  });
+}
+function replace(node) {
+  return Promise.all([replaceForPosition(node, "::before"), replaceForPosition(node, "::after")]);
+}
+function processable(node) {
+  return node.parentNode !== document.head && !~TAGNAMES_TO_SKIP_FOR_PSEUDOELEMENTS.indexOf(node.tagName.toUpperCase()) && !node.getAttribute(DATA_FA_PSEUDO_ELEMENT) && (!node.parentNode || node.parentNode.tagName !== "svg");
+}
+function searchPseudoElements(root) {
+  if (!IS_DOM) return;
+  return new Promise((resolve2, reject) => {
+    const operations = toArray(root.querySelectorAll("*")).filter(processable).map(replace);
+    const end2 = perf.begin("searchPseudoElements");
+    disableObservation();
+    Promise.all(operations).then(() => {
+      end2();
+      enableObservation();
+      resolve2();
+    }).catch(() => {
+      end2();
+      enableObservation();
+      reject();
+    });
+  });
+}
+function fillBlack(abstract) {
+  let force = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : true;
+  if (abstract.attributes && (abstract.attributes.fill || force)) {
+    abstract.attributes.fill = "black";
+  }
+  return abstract;
+}
+function deGroup(abstract) {
+  if (abstract.tag === "g") {
+    return abstract.children;
+  } else {
+    return [abstract];
+  }
+}
+var noop2, _WINDOW, _DOCUMENT, _MUTATION_OBSERVER, _PERFORMANCE, userAgent, WINDOW, DOCUMENT, MUTATION_OBSERVER, PERFORMANCE, IS_BROWSER, IS_DOM, IS_IE, a, t, r, o, c, et$1, bt, Ct, Dt, Kt, ao, eo, lo, y, no, fo, ho, x$1, u$1, m$1, t$1, yo, mo, Io, Fo, So, NAMESPACE_IDENTIFIER, UNITS_IN_GRID, DEFAULT_CSS_PREFIX, DEFAULT_REPLACEMENT_CLASS, DATA_FA_I2SVG, DATA_FA_PSEUDO_ELEMENT, DATA_FA_PSEUDO_ELEMENT_PENDING, DATA_PREFIX, DATA_ICON, HTML_CLASS_I2SVG_BASE_CLASS, MUTATION_APPROACH_ASYNC, TAGNAMES_TO_SKIP_FOR_PSEUDOELEMENTS, PRODUCTION, FAMILIES, _PREFIX_TO_STYLE, PREFIX_TO_STYLE, _STYLE_TO_PREFIX, STYLE_TO_PREFIX, _PREFIX_TO_LONG_STYLE, PREFIX_TO_LONG_STYLE, _LONG_STYLE_TO_PREFIX, LONG_STYLE_TO_PREFIX, ICON_SELECTION_SYNTAX_PATTERN, LAYERS_TEXT_CLASSNAME, FONT_FAMILY_PATTERN, _FONT_WEIGHT_TO_PREFIX, FONT_WEIGHT_TO_PREFIX, ATTRIBUTES_WATCHED_FOR_MUTATION, DUOTONE_CLASSES, prefixes, RESERVED_CLASSES, initial2, _default, _config, config, _onChangeCb, d$2, meaninglessTransform, idPool, baseStyles, _cssInserted, InjectCSS, w$1, namespace, functions, listener, loaded, bindInternal4, reduce, styles, shims, LONG_STYLE, _defaultUsablePrefix, _byUnicode, _byLigature, _byOldName, _byOldUnicode, _byAlias, PREFIXES, build, emptyCanonicalIcon, PREFIXES_FOR_FAMILY, Library, _plugins, _hooks, providers, defaultProviderKeys, library, noAuto, dom, parse2, api, autoReplace, styles$1, missingIconResolutionMixin, noop$1, p$2, preamble, begin, end, perf, noop$2, mutators, disabled, mo$1, styles$2, knownPrefixes, render, ReplaceElements, Layers, LayersCounter, LayersText, CLEAN_CONTENT_PATTERN, SECONDARY_UNICODE_RANGE, _FONT_FAMILY_WEIGHT_TO_PREFIX, FONT_FAMILY_WEIGHT_TO_PREFIX, FONT_FAMILY_WEIGHT_FALLBACK, PseudoElements, _unwatched, MutationObserver$1, parseTransformString, PowerTransforms, ALL_SPACE, Masks, MissingIconIndicator, SvgSymbols, plugins, noAuto$1, config$1, library$1, dom$1, parse$1, findIconDefinition$1, toHtml$1, icon, layer, text2, counter;
+var init_fontawesome_svg_core = __esm({
+  "node_modules/@fortawesome/fontawesome-svg-core/index.mjs"() {
+    noop2 = () => {
+    };
+    _WINDOW = {};
+    _DOCUMENT = {};
+    _MUTATION_OBSERVER = null;
+    _PERFORMANCE = {
+      mark: noop2,
+      measure: noop2
+    };
+    try {
+      if (typeof window !== "undefined") _WINDOW = window;
+      if (typeof document !== "undefined") _DOCUMENT = document;
+      if (typeof MutationObserver !== "undefined") _MUTATION_OBSERVER = MutationObserver;
+      if (typeof performance !== "undefined") _PERFORMANCE = performance;
+    } catch (e3) {
+    }
+    ({
+      userAgent = ""
+    } = _WINDOW.navigator || {});
+    WINDOW = _WINDOW;
+    DOCUMENT = _DOCUMENT;
+    MUTATION_OBSERVER = _MUTATION_OBSERVER;
+    PERFORMANCE = _PERFORMANCE;
+    IS_BROWSER = !!WINDOW.document;
+    IS_DOM = !!DOCUMENT.documentElement && !!DOCUMENT.head && typeof DOCUMENT.addEventListener === "function" && typeof DOCUMENT.createElement === "function";
+    IS_IE = ~userAgent.indexOf("MSIE") || ~userAgent.indexOf("Trident/");
+    a = "classic";
+    t = "duotone";
+    r = "sharp";
+    o = "sharp-duotone";
+    c = [a, t, r, o];
+    et$1 = {
+      classic: {
+        900: "fas",
+        400: "far",
+        normal: "far",
+        300: "fal",
+        100: "fat"
+      },
+      sharp: {
+        900: "fass",
+        400: "fasr",
+        300: "fasl",
+        100: "fast"
+      },
+      "sharp-duotone": {
+        900: "fasds"
+      }
+    };
+    bt = {
+      kit: {
+        fak: "kit",
+        "fa-kit": "kit"
+      },
+      "kit-duotone": {
+        fakd: "kit-duotone",
+        "fa-kit-duotone": "kit-duotone"
+      }
+    };
+    Ct = ["kit"];
+    Dt = /fa(s|r|l|t|d|b|k|kd|ss|sr|sl|st|sds)?[\-\ ]/;
+    Kt = /Font ?Awesome ?([56 ]*)(Solid|Regular|Light|Thin|Duotone|Brands|Free|Pro|Sharp Duotone|Sharp|Kit)?.*/i;
+    ao = {
+      "Font Awesome 5 Free": {
+        900: "fas",
+        400: "far"
+      },
+      "Font Awesome 5 Pro": {
+        900: "fas",
+        400: "far",
+        normal: "far",
+        300: "fal"
+      },
+      "Font Awesome 5 Brands": {
+        400: "fab",
+        normal: "fab"
+      },
+      "Font Awesome 5 Duotone": {
+        900: "fad"
+      }
+    };
+    eo = {
+      "Font Awesome 6 Free": {
+        900: "fas",
+        400: "far"
+      },
+      "Font Awesome 6 Pro": {
+        900: "fas",
+        400: "far",
+        normal: "far",
+        300: "fal",
+        100: "fat"
+      },
+      "Font Awesome 6 Brands": {
+        400: "fab",
+        normal: "fab"
+      },
+      "Font Awesome 6 Duotone": {
+        900: "fad"
+      },
+      "Font Awesome 6 Sharp": {
+        900: "fass",
+        400: "fasr",
+        normal: "fasr",
+        300: "fasl",
+        100: "fast"
+      },
+      "Font Awesome 6 Sharp Duotone": {
+        900: "fasds"
+      }
+    };
+    lo = {
+      classic: {
+        "fa-brands": "fab",
+        "fa-duotone": "fad",
+        "fa-light": "fal",
+        "fa-regular": "far",
+        "fa-solid": "fas",
+        "fa-thin": "fat"
+      },
+      sharp: {
+        "fa-solid": "fass",
+        "fa-regular": "fasr",
+        "fa-light": "fasl",
+        "fa-thin": "fast"
+      },
+      "sharp-duotone": {
+        "fa-solid": "fasds"
+      }
+    };
+    y = {
+      classic: ["fas", "far", "fal", "fat"],
+      sharp: ["fass", "fasr", "fasl", "fast"],
+      "sharp-duotone": ["fasds"]
+    };
+    no = {
+      classic: {
+        fab: "fa-brands",
+        fad: "fa-duotone",
+        fal: "fa-light",
+        far: "fa-regular",
+        fas: "fa-solid",
+        fat: "fa-thin"
+      },
+      sharp: {
+        fass: "fa-solid",
+        fasr: "fa-regular",
+        fasl: "fa-light",
+        fast: "fa-thin"
+      },
+      "sharp-duotone": {
+        fasds: "fa-solid"
+      }
+    };
+    fo = {
+      classic: {
+        solid: "fas",
+        regular: "far",
+        light: "fal",
+        thin: "fat",
+        duotone: "fad",
+        brands: "fab"
+      },
+      sharp: {
+        solid: "fass",
+        regular: "fasr",
+        light: "fasl",
+        thin: "fast"
+      },
+      "sharp-duotone": {
+        solid: "fasds"
+      }
+    };
+    ho = {
+      classic: {
+        fa: "solid",
+        fas: "solid",
+        "fa-solid": "solid",
+        far: "regular",
+        "fa-regular": "regular",
+        fal: "light",
+        "fa-light": "light",
+        fat: "thin",
+        "fa-thin": "thin",
+        fad: "duotone",
+        "fa-duotone": "duotone",
+        fab: "brands",
+        "fa-brands": "brands"
+      },
+      sharp: {
+        fa: "solid",
+        fass: "solid",
+        "fa-solid": "solid",
+        fasr: "regular",
+        "fa-regular": "regular",
+        fasl: "light",
+        "fa-light": "light",
+        fast: "thin",
+        "fa-thin": "thin"
+      },
+      "sharp-duotone": {
+        fa: "solid",
+        fasds: "solid",
+        "fa-solid": "solid"
+      }
+    };
+    x$1 = ["solid", "regular", "light", "thin", "duotone", "brands"];
+    u$1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    m$1 = u$1.concat([11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
+    t$1 = {
+      GROUP: "duotone-group",
+      SWAP_OPACITY: "swap-opacity",
+      PRIMARY: "primary",
+      SECONDARY: "secondary"
+    };
+    yo = [...Object.keys(y), ...x$1, "2xs", "xs", "sm", "lg", "xl", "2xl", "beat", "border", "fade", "beat-fade", "bounce", "flip-both", "flip-horizontal", "flip-vertical", "flip", "fw", "inverse", "layers-counter", "layers-text", "layers", "li", "pull-left", "pull-right", "pulse", "rotate-180", "rotate-270", "rotate-90", "rotate-by", "shake", "spin-pulse", "spin-reverse", "spin", "stack-1x", "stack-2x", "stack", "ul", t$1.GROUP, t$1.SWAP_OPACITY, t$1.PRIMARY, t$1.SECONDARY].concat(u$1.map((o3) => "".concat(o3, "x"))).concat(m$1.map((o3) => "w-".concat(o3)));
+    mo = {
+      "Font Awesome Kit": {
+        400: "fak",
+        normal: "fak"
+      },
+      "Font Awesome Kit Duotone": {
+        400: "fakd",
+        normal: "fakd"
+      }
+    };
+    Io = {
+      kit: {
+        "fa-kit": "fak"
+      },
+      "kit-duotone": {
+        "fa-kit-duotone": "fakd"
+      }
+    };
+    Fo = {
+      kit: {
+        fak: "fa-kit"
+      },
+      "kit-duotone": {
+        fakd: "fa-kit-duotone"
+      }
+    };
+    So = {
+      kit: {
+        kit: "fak"
+      },
+      "kit-duotone": {
+        "kit-duotone": "fakd"
+      }
+    };
+    NAMESPACE_IDENTIFIER = "___FONT_AWESOME___";
+    UNITS_IN_GRID = 16;
+    DEFAULT_CSS_PREFIX = "fa";
+    DEFAULT_REPLACEMENT_CLASS = "svg-inline--fa";
+    DATA_FA_I2SVG = "data-fa-i2svg";
+    DATA_FA_PSEUDO_ELEMENT = "data-fa-pseudo-element";
+    DATA_FA_PSEUDO_ELEMENT_PENDING = "data-fa-pseudo-element-pending";
+    DATA_PREFIX = "data-prefix";
+    DATA_ICON = "data-icon";
+    HTML_CLASS_I2SVG_BASE_CLASS = "fontawesome-i2svg";
+    MUTATION_APPROACH_ASYNC = "async";
+    TAGNAMES_TO_SKIP_FOR_PSEUDOELEMENTS = ["HTML", "HEAD", "STYLE", "SCRIPT"];
+    PRODUCTION = (() => {
+      try {
+        return false;
+      } catch (e$$1) {
+        return false;
+      }
+    })();
+    FAMILIES = [a, r, o];
+    _PREFIX_TO_STYLE = {
+      ...ho
+    };
+    _PREFIX_TO_STYLE[a] = {
+      ...ho[a],
+      ...bt["kit"],
+      ...bt["kit-duotone"]
+    };
+    PREFIX_TO_STYLE = familyProxy(_PREFIX_TO_STYLE);
+    _STYLE_TO_PREFIX = {
+      ...fo
+    };
+    _STYLE_TO_PREFIX[a] = {
+      ..._STYLE_TO_PREFIX[a],
+      ...So["kit"],
+      ...So["kit-duotone"]
+    };
+    STYLE_TO_PREFIX = familyProxy(_STYLE_TO_PREFIX);
+    _PREFIX_TO_LONG_STYLE = {
+      ...no
+    };
+    _PREFIX_TO_LONG_STYLE[a] = {
+      ..._PREFIX_TO_LONG_STYLE[a],
+      ...Fo["kit"]
+    };
+    PREFIX_TO_LONG_STYLE = familyProxy(_PREFIX_TO_LONG_STYLE);
+    _LONG_STYLE_TO_PREFIX = {
+      ...lo
+    };
+    _LONG_STYLE_TO_PREFIX[a] = {
+      ..._LONG_STYLE_TO_PREFIX[a],
+      ...Io["kit"]
+    };
+    LONG_STYLE_TO_PREFIX = familyProxy(_LONG_STYLE_TO_PREFIX);
+    ICON_SELECTION_SYNTAX_PATTERN = Dt;
+    LAYERS_TEXT_CLASSNAME = "fa-layers-text";
+    FONT_FAMILY_PATTERN = Kt;
+    _FONT_WEIGHT_TO_PREFIX = {
+      ...et$1
+    };
+    FONT_WEIGHT_TO_PREFIX = familyProxy(_FONT_WEIGHT_TO_PREFIX);
+    ATTRIBUTES_WATCHED_FOR_MUTATION = ["class", "data-prefix", "data-icon", "data-fa-transform", "data-fa-mask"];
+    DUOTONE_CLASSES = t$1;
+    prefixes = /* @__PURE__ */ new Set();
+    Object.keys(STYLE_TO_PREFIX[a]).map(prefixes.add.bind(prefixes));
+    Object.keys(STYLE_TO_PREFIX[r]).map(prefixes.add.bind(prefixes));
+    Object.keys(STYLE_TO_PREFIX[o]).map(prefixes.add.bind(prefixes));
+    RESERVED_CLASSES = [...Ct, ...yo];
+    initial2 = WINDOW.FontAwesomeConfig || {};
+    if (DOCUMENT && typeof DOCUMENT.querySelector === "function") {
+      const attrs = [["data-family-prefix", "familyPrefix"], ["data-css-prefix", "cssPrefix"], ["data-family-default", "familyDefault"], ["data-style-default", "styleDefault"], ["data-replacement-class", "replacementClass"], ["data-auto-replace-svg", "autoReplaceSvg"], ["data-auto-add-css", "autoAddCss"], ["data-auto-a11y", "autoA11y"], ["data-search-pseudo-elements", "searchPseudoElements"], ["data-observe-mutations", "observeMutations"], ["data-mutate-approach", "mutateApproach"], ["data-keep-original-source", "keepOriginalSource"], ["data-measure-performance", "measurePerformance"], ["data-show-missing-icons", "showMissingIcons"]];
+      attrs.forEach((_ref) => {
+        let [attr, key2] = _ref;
+        const val = coerce(getAttrConfig(attr));
+        if (val !== void 0 && val !== null) {
+          initial2[key2] = val;
+        }
+      });
+    }
+    _default = {
+      styleDefault: "solid",
+      familyDefault: "classic",
+      cssPrefix: DEFAULT_CSS_PREFIX,
+      replacementClass: DEFAULT_REPLACEMENT_CLASS,
+      autoReplaceSvg: true,
+      autoAddCss: true,
+      autoA11y: true,
+      searchPseudoElements: false,
+      observeMutations: true,
+      mutateApproach: "async",
+      keepOriginalSource: true,
+      measurePerformance: false,
+      showMissingIcons: true
+    };
+    if (initial2.familyPrefix) {
+      initial2.cssPrefix = initial2.familyPrefix;
+    }
+    _config = {
+      ..._default,
+      ...initial2
+    };
+    if (!_config.autoReplaceSvg) _config.observeMutations = false;
+    config = {};
+    Object.keys(_default).forEach((key2) => {
+      Object.defineProperty(config, key2, {
+        enumerable: true,
+        set: function(val) {
+          _config[key2] = val;
+          _onChangeCb.forEach((cb) => cb(config));
+        },
+        get: function() {
+          return _config[key2];
+        }
+      });
+    });
+    Object.defineProperty(config, "familyPrefix", {
+      enumerable: true,
+      set: function(val) {
+        _config.cssPrefix = val;
+        _onChangeCb.forEach((cb) => cb(config));
+      },
+      get: function() {
+        return _config.cssPrefix;
+      }
+    });
+    WINDOW.FontAwesomeConfig = config;
+    _onChangeCb = [];
+    d$2 = UNITS_IN_GRID;
+    meaninglessTransform = {
+      size: 16,
+      x: 0,
+      y: 0,
+      rotate: 0,
+      flipX: false,
+      flipY: false
+    };
+    idPool = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    baseStyles = ':root, :host {\n  --fa-font-solid: normal 900 1em/1 "Font Awesome 6 Free";\n  --fa-font-regular: normal 400 1em/1 "Font Awesome 6 Free";\n  --fa-font-light: normal 300 1em/1 "Font Awesome 6 Pro";\n  --fa-font-thin: normal 100 1em/1 "Font Awesome 6 Pro";\n  --fa-font-duotone: normal 900 1em/1 "Font Awesome 6 Duotone";\n  --fa-font-brands: normal 400 1em/1 "Font Awesome 6 Brands";\n  --fa-font-sharp-solid: normal 900 1em/1 "Font Awesome 6 Sharp";\n  --fa-font-sharp-regular: normal 400 1em/1 "Font Awesome 6 Sharp";\n  --fa-font-sharp-light: normal 300 1em/1 "Font Awesome 6 Sharp";\n  --fa-font-sharp-thin: normal 100 1em/1 "Font Awesome 6 Sharp";\n  --fa-font-sharp-duotone-solid: normal 900 1em/1 "Font Awesome 6 Sharp Duotone";\n}\n\nsvg:not(:root).svg-inline--fa, svg:not(:host).svg-inline--fa {\n  overflow: visible;\n  box-sizing: content-box;\n}\n\n.svg-inline--fa {\n  display: var(--fa-display, inline-block);\n  height: 1em;\n  overflow: visible;\n  vertical-align: -0.125em;\n}\n.svg-inline--fa.fa-2xs {\n  vertical-align: 0.1em;\n}\n.svg-inline--fa.fa-xs {\n  vertical-align: 0em;\n}\n.svg-inline--fa.fa-sm {\n  vertical-align: -0.0714285705em;\n}\n.svg-inline--fa.fa-lg {\n  vertical-align: -0.2em;\n}\n.svg-inline--fa.fa-xl {\n  vertical-align: -0.25em;\n}\n.svg-inline--fa.fa-2xl {\n  vertical-align: -0.3125em;\n}\n.svg-inline--fa.fa-pull-left {\n  margin-right: var(--fa-pull-margin, 0.3em);\n  width: auto;\n}\n.svg-inline--fa.fa-pull-right {\n  margin-left: var(--fa-pull-margin, 0.3em);\n  width: auto;\n}\n.svg-inline--fa.fa-li {\n  width: var(--fa-li-width, 2em);\n  top: 0.25em;\n}\n.svg-inline--fa.fa-fw {\n  width: var(--fa-fw-width, 1.25em);\n}\n\n.fa-layers svg.svg-inline--fa {\n  bottom: 0;\n  left: 0;\n  margin: auto;\n  position: absolute;\n  right: 0;\n  top: 0;\n}\n\n.fa-layers-counter, .fa-layers-text {\n  display: inline-block;\n  position: absolute;\n  text-align: center;\n}\n\n.fa-layers {\n  display: inline-block;\n  height: 1em;\n  position: relative;\n  text-align: center;\n  vertical-align: -0.125em;\n  width: 1em;\n}\n.fa-layers svg.svg-inline--fa {\n  transform-origin: center center;\n}\n\n.fa-layers-text {\n  left: 50%;\n  top: 50%;\n  transform: translate(-50%, -50%);\n  transform-origin: center center;\n}\n\n.fa-layers-counter {\n  background-color: var(--fa-counter-background-color, #ff253a);\n  border-radius: var(--fa-counter-border-radius, 1em);\n  box-sizing: border-box;\n  color: var(--fa-inverse, #fff);\n  line-height: var(--fa-counter-line-height, 1);\n  max-width: var(--fa-counter-max-width, 5em);\n  min-width: var(--fa-counter-min-width, 1.5em);\n  overflow: hidden;\n  padding: var(--fa-counter-padding, 0.25em 0.5em);\n  right: var(--fa-right, 0);\n  text-overflow: ellipsis;\n  top: var(--fa-top, 0);\n  transform: scale(var(--fa-counter-scale, 0.25));\n  transform-origin: top right;\n}\n\n.fa-layers-bottom-right {\n  bottom: var(--fa-bottom, 0);\n  right: var(--fa-right, 0);\n  top: auto;\n  transform: scale(var(--fa-layers-scale, 0.25));\n  transform-origin: bottom right;\n}\n\n.fa-layers-bottom-left {\n  bottom: var(--fa-bottom, 0);\n  left: var(--fa-left, 0);\n  right: auto;\n  top: auto;\n  transform: scale(var(--fa-layers-scale, 0.25));\n  transform-origin: bottom left;\n}\n\n.fa-layers-top-right {\n  top: var(--fa-top, 0);\n  right: var(--fa-right, 0);\n  transform: scale(var(--fa-layers-scale, 0.25));\n  transform-origin: top right;\n}\n\n.fa-layers-top-left {\n  left: var(--fa-left, 0);\n  right: auto;\n  top: var(--fa-top, 0);\n  transform: scale(var(--fa-layers-scale, 0.25));\n  transform-origin: top left;\n}\n\n.fa-1x {\n  font-size: 1em;\n}\n\n.fa-2x {\n  font-size: 2em;\n}\n\n.fa-3x {\n  font-size: 3em;\n}\n\n.fa-4x {\n  font-size: 4em;\n}\n\n.fa-5x {\n  font-size: 5em;\n}\n\n.fa-6x {\n  font-size: 6em;\n}\n\n.fa-7x {\n  font-size: 7em;\n}\n\n.fa-8x {\n  font-size: 8em;\n}\n\n.fa-9x {\n  font-size: 9em;\n}\n\n.fa-10x {\n  font-size: 10em;\n}\n\n.fa-2xs {\n  font-size: 0.625em;\n  line-height: 0.1em;\n  vertical-align: 0.225em;\n}\n\n.fa-xs {\n  font-size: 0.75em;\n  line-height: 0.0833333337em;\n  vertical-align: 0.125em;\n}\n\n.fa-sm {\n  font-size: 0.875em;\n  line-height: 0.0714285718em;\n  vertical-align: 0.0535714295em;\n}\n\n.fa-lg {\n  font-size: 1.25em;\n  line-height: 0.05em;\n  vertical-align: -0.075em;\n}\n\n.fa-xl {\n  font-size: 1.5em;\n  line-height: 0.0416666682em;\n  vertical-align: -0.125em;\n}\n\n.fa-2xl {\n  font-size: 2em;\n  line-height: 0.03125em;\n  vertical-align: -0.1875em;\n}\n\n.fa-fw {\n  text-align: center;\n  width: 1.25em;\n}\n\n.fa-ul {\n  list-style-type: none;\n  margin-left: var(--fa-li-margin, 2.5em);\n  padding-left: 0;\n}\n.fa-ul > li {\n  position: relative;\n}\n\n.fa-li {\n  left: calc(-1 * var(--fa-li-width, 2em));\n  position: absolute;\n  text-align: center;\n  width: var(--fa-li-width, 2em);\n  line-height: inherit;\n}\n\n.fa-border {\n  border-color: var(--fa-border-color, #eee);\n  border-radius: var(--fa-border-radius, 0.1em);\n  border-style: var(--fa-border-style, solid);\n  border-width: var(--fa-border-width, 0.08em);\n  padding: var(--fa-border-padding, 0.2em 0.25em 0.15em);\n}\n\n.fa-pull-left {\n  float: left;\n  margin-right: var(--fa-pull-margin, 0.3em);\n}\n\n.fa-pull-right {\n  float: right;\n  margin-left: var(--fa-pull-margin, 0.3em);\n}\n\n.fa-beat {\n  animation-name: fa-beat;\n  animation-delay: var(--fa-animation-delay, 0s);\n  animation-direction: var(--fa-animation-direction, normal);\n  animation-duration: var(--fa-animation-duration, 1s);\n  animation-iteration-count: var(--fa-animation-iteration-count, infinite);\n  animation-timing-function: var(--fa-animation-timing, ease-in-out);\n}\n\n.fa-bounce {\n  animation-name: fa-bounce;\n  animation-delay: var(--fa-animation-delay, 0s);\n  animation-direction: var(--fa-animation-direction, normal);\n  animation-duration: var(--fa-animation-duration, 1s);\n  animation-iteration-count: var(--fa-animation-iteration-count, infinite);\n  animation-timing-function: var(--fa-animation-timing, cubic-bezier(0.28, 0.84, 0.42, 1));\n}\n\n.fa-fade {\n  animation-name: fa-fade;\n  animation-delay: var(--fa-animation-delay, 0s);\n  animation-direction: var(--fa-animation-direction, normal);\n  animation-duration: var(--fa-animation-duration, 1s);\n  animation-iteration-count: var(--fa-animation-iteration-count, infinite);\n  animation-timing-function: var(--fa-animation-timing, cubic-bezier(0.4, 0, 0.6, 1));\n}\n\n.fa-beat-fade {\n  animation-name: fa-beat-fade;\n  animation-delay: var(--fa-animation-delay, 0s);\n  animation-direction: var(--fa-animation-direction, normal);\n  animation-duration: var(--fa-animation-duration, 1s);\n  animation-iteration-count: var(--fa-animation-iteration-count, infinite);\n  animation-timing-function: var(--fa-animation-timing, cubic-bezier(0.4, 0, 0.6, 1));\n}\n\n.fa-flip {\n  animation-name: fa-flip;\n  animation-delay: var(--fa-animation-delay, 0s);\n  animation-direction: var(--fa-animation-direction, normal);\n  animation-duration: var(--fa-animation-duration, 1s);\n  animation-iteration-count: var(--fa-animation-iteration-count, infinite);\n  animation-timing-function: var(--fa-animation-timing, ease-in-out);\n}\n\n.fa-shake {\n  animation-name: fa-shake;\n  animation-delay: var(--fa-animation-delay, 0s);\n  animation-direction: var(--fa-animation-direction, normal);\n  animation-duration: var(--fa-animation-duration, 1s);\n  animation-iteration-count: var(--fa-animation-iteration-count, infinite);\n  animation-timing-function: var(--fa-animation-timing, linear);\n}\n\n.fa-spin {\n  animation-name: fa-spin;\n  animation-delay: var(--fa-animation-delay, 0s);\n  animation-direction: var(--fa-animation-direction, normal);\n  animation-duration: var(--fa-animation-duration, 2s);\n  animation-iteration-count: var(--fa-animation-iteration-count, infinite);\n  animation-timing-function: var(--fa-animation-timing, linear);\n}\n\n.fa-spin-reverse {\n  --fa-animation-direction: reverse;\n}\n\n.fa-pulse,\n.fa-spin-pulse {\n  animation-name: fa-spin;\n  animation-direction: var(--fa-animation-direction, normal);\n  animation-duration: var(--fa-animation-duration, 1s);\n  animation-iteration-count: var(--fa-animation-iteration-count, infinite);\n  animation-timing-function: var(--fa-animation-timing, steps(8));\n}\n\n@media (prefers-reduced-motion: reduce) {\n  .fa-beat,\n.fa-bounce,\n.fa-fade,\n.fa-beat-fade,\n.fa-flip,\n.fa-pulse,\n.fa-shake,\n.fa-spin,\n.fa-spin-pulse {\n    animation-delay: -1ms;\n    animation-duration: 1ms;\n    animation-iteration-count: 1;\n    transition-delay: 0s;\n    transition-duration: 0s;\n  }\n}\n@keyframes fa-beat {\n  0%, 90% {\n    transform: scale(1);\n  }\n  45% {\n    transform: scale(var(--fa-beat-scale, 1.25));\n  }\n}\n@keyframes fa-bounce {\n  0% {\n    transform: scale(1, 1) translateY(0);\n  }\n  10% {\n    transform: scale(var(--fa-bounce-start-scale-x, 1.1), var(--fa-bounce-start-scale-y, 0.9)) translateY(0);\n  }\n  30% {\n    transform: scale(var(--fa-bounce-jump-scale-x, 0.9), var(--fa-bounce-jump-scale-y, 1.1)) translateY(var(--fa-bounce-height, -0.5em));\n  }\n  50% {\n    transform: scale(var(--fa-bounce-land-scale-x, 1.05), var(--fa-bounce-land-scale-y, 0.95)) translateY(0);\n  }\n  57% {\n    transform: scale(1, 1) translateY(var(--fa-bounce-rebound, -0.125em));\n  }\n  64% {\n    transform: scale(1, 1) translateY(0);\n  }\n  100% {\n    transform: scale(1, 1) translateY(0);\n  }\n}\n@keyframes fa-fade {\n  50% {\n    opacity: var(--fa-fade-opacity, 0.4);\n  }\n}\n@keyframes fa-beat-fade {\n  0%, 100% {\n    opacity: var(--fa-beat-fade-opacity, 0.4);\n    transform: scale(1);\n  }\n  50% {\n    opacity: 1;\n    transform: scale(var(--fa-beat-fade-scale, 1.125));\n  }\n}\n@keyframes fa-flip {\n  50% {\n    transform: rotate3d(var(--fa-flip-x, 0), var(--fa-flip-y, 1), var(--fa-flip-z, 0), var(--fa-flip-angle, -180deg));\n  }\n}\n@keyframes fa-shake {\n  0% {\n    transform: rotate(-15deg);\n  }\n  4% {\n    transform: rotate(15deg);\n  }\n  8%, 24% {\n    transform: rotate(-18deg);\n  }\n  12%, 28% {\n    transform: rotate(18deg);\n  }\n  16% {\n    transform: rotate(-22deg);\n  }\n  20% {\n    transform: rotate(22deg);\n  }\n  32% {\n    transform: rotate(-12deg);\n  }\n  36% {\n    transform: rotate(12deg);\n  }\n  40%, 100% {\n    transform: rotate(0deg);\n  }\n}\n@keyframes fa-spin {\n  0% {\n    transform: rotate(0deg);\n  }\n  100% {\n    transform: rotate(360deg);\n  }\n}\n.fa-rotate-90 {\n  transform: rotate(90deg);\n}\n\n.fa-rotate-180 {\n  transform: rotate(180deg);\n}\n\n.fa-rotate-270 {\n  transform: rotate(270deg);\n}\n\n.fa-flip-horizontal {\n  transform: scale(-1, 1);\n}\n\n.fa-flip-vertical {\n  transform: scale(1, -1);\n}\n\n.fa-flip-both,\n.fa-flip-horizontal.fa-flip-vertical {\n  transform: scale(-1, -1);\n}\n\n.fa-rotate-by {\n  transform: rotate(var(--fa-rotate-angle, 0));\n}\n\n.fa-stack {\n  display: inline-block;\n  vertical-align: middle;\n  height: 2em;\n  position: relative;\n  width: 2.5em;\n}\n\n.fa-stack-1x,\n.fa-stack-2x {\n  bottom: 0;\n  left: 0;\n  margin: auto;\n  position: absolute;\n  right: 0;\n  top: 0;\n  z-index: var(--fa-stack-z-index, auto);\n}\n\n.svg-inline--fa.fa-stack-1x {\n  height: 1em;\n  width: 1.25em;\n}\n.svg-inline--fa.fa-stack-2x {\n  height: 2em;\n  width: 2.5em;\n}\n\n.fa-inverse {\n  color: var(--fa-inverse, #fff);\n}\n\n.sr-only,\n.fa-sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border-width: 0;\n}\n\n.sr-only-focusable:not(:focus),\n.fa-sr-only-focusable:not(:focus) {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  overflow: hidden;\n  clip: rect(0, 0, 0, 0);\n  white-space: nowrap;\n  border-width: 0;\n}\n\n.svg-inline--fa .fa-primary {\n  fill: var(--fa-primary-color, currentColor);\n  opacity: var(--fa-primary-opacity, 1);\n}\n\n.svg-inline--fa .fa-secondary {\n  fill: var(--fa-secondary-color, currentColor);\n  opacity: var(--fa-secondary-opacity, 0.4);\n}\n\n.svg-inline--fa.fa-swap-opacity .fa-primary {\n  opacity: var(--fa-secondary-opacity, 0.4);\n}\n\n.svg-inline--fa.fa-swap-opacity .fa-secondary {\n  opacity: var(--fa-primary-opacity, 1);\n}\n\n.svg-inline--fa mask .fa-primary,\n.svg-inline--fa mask .fa-secondary {\n  fill: black;\n}\n\n.fad.fa-inverse,\n.fa-duotone.fa-inverse {\n  color: var(--fa-inverse, #fff);\n}';
+    _cssInserted = false;
+    InjectCSS = {
+      mixout() {
+        return {
+          dom: {
+            css,
+            insertCss: ensureCss
+          }
+        };
+      },
+      hooks() {
+        return {
+          beforeDOMElementCreation() {
+            ensureCss();
+          },
+          beforeI2svg() {
+            ensureCss();
+          }
+        };
+      }
+    };
+    w$1 = WINDOW || {};
+    if (!w$1[NAMESPACE_IDENTIFIER]) w$1[NAMESPACE_IDENTIFIER] = {};
+    if (!w$1[NAMESPACE_IDENTIFIER].styles) w$1[NAMESPACE_IDENTIFIER].styles = {};
+    if (!w$1[NAMESPACE_IDENTIFIER].hooks) w$1[NAMESPACE_IDENTIFIER].hooks = {};
+    if (!w$1[NAMESPACE_IDENTIFIER].shims) w$1[NAMESPACE_IDENTIFIER].shims = [];
+    namespace = w$1[NAMESPACE_IDENTIFIER];
+    functions = [];
+    listener = function() {
+      DOCUMENT.removeEventListener("DOMContentLoaded", listener);
+      loaded = 1;
+      functions.map((fn) => fn());
+    };
+    loaded = false;
+    if (IS_DOM) {
+      loaded = (DOCUMENT.documentElement.doScroll ? /^loaded|^c/ : /^loaded|^i|^c/).test(DOCUMENT.readyState);
+      if (!loaded) DOCUMENT.addEventListener("DOMContentLoaded", listener);
+    }
+    bindInternal4 = function bindInternal42(func, thisContext) {
+      return function(a2, b, c3, d) {
+        return func.call(thisContext, a2, b, c3, d);
+      };
+    };
+    reduce = function fastReduceObject(subject, fn, initialValue, thisContext) {
+      var keys = Object.keys(subject), length = keys.length, iterator = thisContext !== void 0 ? bindInternal4(fn, thisContext) : fn, i, key2, result;
+      if (initialValue === void 0) {
+        i = 1;
+        result = subject[keys[0]];
+      } else {
+        i = 0;
+        result = initialValue;
+      }
+      for (; i < length; i++) {
+        key2 = keys[i];
+        result = iterator(result, subject[key2], key2, subject);
+      }
+      return result;
+    };
+    ({
+      styles,
+      shims
+    } = namespace);
+    LONG_STYLE = {
+      [a]: Object.values(PREFIX_TO_LONG_STYLE[a]),
+      [r]: Object.values(PREFIX_TO_LONG_STYLE[r]),
+      [o]: Object.values(PREFIX_TO_LONG_STYLE[o])
+    };
+    _defaultUsablePrefix = null;
+    _byUnicode = {};
+    _byLigature = {};
+    _byOldName = {};
+    _byOldUnicode = {};
+    _byAlias = {};
+    PREFIXES = {
+      [a]: Object.keys(PREFIX_TO_STYLE[a]),
+      [r]: Object.keys(PREFIX_TO_STYLE[r]),
+      [o]: Object.keys(PREFIX_TO_STYLE[o])
+    };
+    build = () => {
+      const lookup = (reducer) => {
+        return reduce(styles, (o$$1, style, prefix) => {
+          o$$1[prefix] = reduce(style, reducer, {});
+          return o$$1;
+        }, {});
+      };
+      _byUnicode = lookup((acc, icon2, iconName) => {
+        if (icon2[3]) {
+          acc[icon2[3]] = iconName;
+        }
+        if (icon2[2]) {
+          const aliases = icon2[2].filter((a$$1) => {
+            return typeof a$$1 === "number";
+          });
+          aliases.forEach((alias) => {
+            acc[alias.toString(16)] = iconName;
+          });
+        }
+        return acc;
+      });
+      _byLigature = lookup((acc, icon2, iconName) => {
+        acc[iconName] = iconName;
+        if (icon2[2]) {
+          const aliases = icon2[2].filter((a$$1) => {
+            return typeof a$$1 === "string";
+          });
+          aliases.forEach((alias) => {
+            acc[alias] = iconName;
+          });
+        }
+        return acc;
+      });
+      _byAlias = lookup((acc, icon2, iconName) => {
+        const aliases = icon2[2];
+        acc[iconName] = iconName;
+        aliases.forEach((alias) => {
+          acc[alias] = iconName;
+        });
+        return acc;
+      });
+      const hasRegular = "far" in styles || config.autoFetchSvg;
+      const shimLookups = reduce(shims, (acc, shim) => {
+        const maybeNameMaybeUnicode = shim[0];
+        let prefix = shim[1];
+        const iconName = shim[2];
+        if (prefix === "far" && !hasRegular) {
+          prefix = "fas";
+        }
+        if (typeof maybeNameMaybeUnicode === "string") {
+          acc.names[maybeNameMaybeUnicode] = {
+            prefix,
+            iconName
+          };
+        }
+        if (typeof maybeNameMaybeUnicode === "number") {
+          acc.unicodes[maybeNameMaybeUnicode.toString(16)] = {
+            prefix,
+            iconName
+          };
+        }
+        return acc;
+      }, {
+        names: {},
+        unicodes: {}
+      });
+      _byOldName = shimLookups.names;
+      _byOldUnicode = shimLookups.unicodes;
+      _defaultUsablePrefix = getCanonicalPrefix(config.styleDefault, {
+        family: config.familyDefault
+      });
+    };
+    onChange((c$$1) => {
+      _defaultUsablePrefix = getCanonicalPrefix(c$$1.styleDefault, {
+        family: config.familyDefault
+      });
+    });
+    build();
+    emptyCanonicalIcon = () => {
+      return {
+        prefix: null,
+        iconName: null,
+        rest: []
+      };
+    };
+    PREFIXES_FOR_FAMILY = {
+      [a]: Object.keys(PREFIX_TO_LONG_STYLE[a]),
+      [r]: Object.keys(PREFIX_TO_LONG_STYLE[r]),
+      [o]: Object.keys(PREFIX_TO_LONG_STYLE[o])
+    };
+    Library = class {
+      constructor() {
+        this.definitions = {};
+      }
+      add() {
+        for (var _len = arguments.length, definitions = new Array(_len), _key = 0; _key < _len; _key++) {
+          definitions[_key] = arguments[_key];
+        }
+        const additions = definitions.reduce(this._pullDefinitions, {});
+        Object.keys(additions).forEach((key2) => {
+          this.definitions[key2] = {
+            ...this.definitions[key2] || {},
+            ...additions[key2]
+          };
+          defineIcons(key2, additions[key2]);
+          const longPrefix = PREFIX_TO_LONG_STYLE[a][key2];
+          if (longPrefix) defineIcons(longPrefix, additions[key2]);
+          build();
+        });
+      }
+      reset() {
+        this.definitions = {};
+      }
+      _pullDefinitions(additions, definition) {
+        const normalized = definition.prefix && definition.iconName && definition.icon ? {
+          0: definition
+        } : definition;
+        Object.keys(normalized).map((key2) => {
+          const {
+            prefix,
+            iconName,
+            icon: icon2
+          } = normalized[key2];
+          const aliases = icon2[2];
+          if (!additions[prefix]) additions[prefix] = {};
+          if (aliases.length > 0) {
+            aliases.forEach((alias) => {
+              if (typeof alias === "string") {
+                additions[prefix][alias] = icon2;
+              }
+            });
+          }
+          additions[prefix][iconName] = icon2;
+        });
+        return additions;
+      }
+    };
+    _plugins = [];
+    _hooks = {};
+    providers = {};
+    defaultProviderKeys = Object.keys(providers);
+    library = new Library();
+    noAuto = () => {
+      config.autoReplaceSvg = false;
+      config.observeMutations = false;
+      callHooks("noAuto");
+    };
+    dom = {
+      i2svg: function() {
+        let params = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+        if (IS_DOM) {
+          callHooks("beforeI2svg", params);
+          callProvided("pseudoElements2svg", params);
+          return callProvided("i2svg", params);
+        } else {
+          return Promise.reject(new Error("Operation requires a DOM of some kind."));
+        }
+      },
+      watch: function() {
+        let params = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+        const {
+          autoReplaceSvgRoot
+        } = params;
+        if (config.autoReplaceSvg === false) {
+          config.autoReplaceSvg = true;
+        }
+        config.observeMutations = true;
+        domready(() => {
+          autoReplace({
+            autoReplaceSvgRoot
+          });
+          callHooks("watch", params);
+        });
+      }
+    };
+    parse2 = {
+      icon: (icon2) => {
+        if (icon2 === null) {
+          return null;
+        }
+        if (typeof icon2 === "object" && icon2.prefix && icon2.iconName) {
+          return {
+            prefix: icon2.prefix,
+            iconName: byAlias(icon2.prefix, icon2.iconName) || icon2.iconName
+          };
+        }
+        if (Array.isArray(icon2) && icon2.length === 2) {
+          const iconName = icon2[1].indexOf("fa-") === 0 ? icon2[1].slice(3) : icon2[1];
+          const prefix = getCanonicalPrefix(icon2[0]);
+          return {
+            prefix,
+            iconName: byAlias(prefix, iconName) || iconName
+          };
+        }
+        if (typeof icon2 === "string" && (icon2.indexOf("".concat(config.cssPrefix, "-")) > -1 || icon2.match(ICON_SELECTION_SYNTAX_PATTERN))) {
+          const canonicalIcon = getCanonicalIcon(icon2.split(" "), {
+            skipLookups: true
+          });
+          return {
+            prefix: canonicalIcon.prefix || getDefaultUsablePrefix(),
+            iconName: byAlias(canonicalIcon.prefix, canonicalIcon.iconName) || canonicalIcon.iconName
+          };
+        }
+        if (typeof icon2 === "string") {
+          const prefix = getDefaultUsablePrefix();
+          return {
+            prefix,
+            iconName: byAlias(prefix, icon2) || icon2
+          };
+        }
+      }
+    };
+    api = {
+      noAuto,
+      config,
+      dom,
+      parse: parse2,
+      library,
+      findIconDefinition,
+      toHtml
+    };
+    autoReplace = function() {
+      let params = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : {};
+      const {
+        autoReplaceSvgRoot = DOCUMENT
+      } = params;
+      if ((Object.keys(namespace.styles).length > 0 || config.autoFetchSvg) && IS_DOM && config.autoReplaceSvg) api.dom.i2svg({
+        node: autoReplaceSvgRoot
+      });
+    };
+    ({
+      styles: styles$1
+    } = namespace);
+    missingIconResolutionMixin = {
+      found: false,
+      width: 512,
+      height: 512
+    };
+    noop$1 = () => {
+    };
+    p$2 = config.measurePerformance && PERFORMANCE && PERFORMANCE.mark && PERFORMANCE.measure ? PERFORMANCE : {
+      mark: noop$1,
+      measure: noop$1
+    };
+    preamble = 'FA "6.6.0"';
+    begin = (name) => {
+      p$2.mark("".concat(preamble, " ").concat(name, " begins"));
+      return () => end(name);
+    };
+    end = (name) => {
+      p$2.mark("".concat(preamble, " ").concat(name, " ends"));
+      p$2.measure("".concat(preamble, " ").concat(name), "".concat(preamble, " ").concat(name, " begins"), "".concat(preamble, " ").concat(name, " ends"));
+    };
+    perf = {
+      begin,
+      end
+    };
+    noop$2 = () => {
+    };
+    mutators = {
+      replace: function(mutation) {
+        const node = mutation[0];
+        if (node.parentNode) {
+          mutation[1].forEach((abstract) => {
+            node.parentNode.insertBefore(convertSVG(abstract), node);
+          });
+          if (node.getAttribute(DATA_FA_I2SVG) === null && config.keepOriginalSource) {
+            let comment = DOCUMENT.createComment(nodeAsComment(node));
+            node.parentNode.replaceChild(comment, node);
+          } else {
+            node.remove();
+          }
+        }
+      },
+      nest: function(mutation) {
+        const node = mutation[0];
+        const abstract = mutation[1];
+        if (~classArray(node).indexOf(config.replacementClass)) {
+          return mutators.replace(mutation);
+        }
+        const forSvg = new RegExp("".concat(config.cssPrefix, "-.*"));
+        delete abstract[0].attributes.id;
+        if (abstract[0].attributes.class) {
+          const splitClasses = abstract[0].attributes.class.split(" ").reduce((acc, cls) => {
+            if (cls === config.replacementClass || cls.match(forSvg)) {
+              acc.toSvg.push(cls);
+            } else {
+              acc.toNode.push(cls);
+            }
+            return acc;
+          }, {
+            toNode: [],
+            toSvg: []
+          });
+          abstract[0].attributes.class = splitClasses.toSvg.join(" ");
+          if (splitClasses.toNode.length === 0) {
+            node.removeAttribute("class");
+          } else {
+            node.setAttribute("class", splitClasses.toNode.join(" "));
+          }
+        }
+        const newInnerHTML = abstract.map((a2) => toHtml(a2)).join("\n");
+        node.setAttribute(DATA_FA_I2SVG, "");
+        node.innerHTML = newInnerHTML;
+      }
+    };
+    disabled = false;
+    mo$1 = null;
+    ({
+      styles: styles$2
+    } = namespace);
+    knownPrefixes = /* @__PURE__ */ new Set();
+    FAMILIES.map((family) => {
+      knownPrefixes.add("fa-".concat(family));
+    });
+    Object.keys(PREFIX_TO_STYLE[a]).map(knownPrefixes.add.bind(knownPrefixes));
+    Object.keys(PREFIX_TO_STYLE[r]).map(knownPrefixes.add.bind(knownPrefixes));
+    Object.keys(PREFIX_TO_STYLE[o]).map(knownPrefixes.add.bind(knownPrefixes));
+    knownPrefixes = [...knownPrefixes];
+    render = function(iconDefinition) {
+      let params = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+      const {
+        transform = meaninglessTransform,
+        symbol = false,
+        mask = null,
+        maskId = null,
+        title = null,
+        titleId = null,
+        classes = [],
+        attributes = {},
+        styles: styles2 = {}
+      } = params;
+      if (!iconDefinition) return;
+      const {
+        prefix,
+        iconName,
+        icon: icon2
+      } = iconDefinition;
+      return domVariants({
+        type: "icon",
+        ...iconDefinition
+      }, () => {
+        callHooks("beforeDOMElementCreation", {
+          iconDefinition,
+          params
+        });
+        if (config.autoA11y) {
+          if (title) {
+            attributes["aria-labelledby"] = "".concat(config.replacementClass, "-title-").concat(titleId || nextUniqueId());
+          } else {
+            attributes["aria-hidden"] = "true";
+            attributes["focusable"] = "false";
+          }
+        }
+        return makeInlineSvgAbstract({
+          icons: {
+            main: asFoundIcon(icon2),
+            mask: mask ? asFoundIcon(mask.icon) : {
+              found: false,
+              width: null,
+              height: null,
+              icon: {}
+            }
+          },
+          prefix,
+          iconName,
+          transform: {
+            ...meaninglessTransform,
+            ...transform
+          },
+          symbol,
+          title,
+          maskId,
+          titleId,
+          extra: {
+            attributes,
+            styles: styles2,
+            classes
+          }
+        });
+      });
+    };
+    ReplaceElements = {
+      mixout() {
+        return {
+          icon: resolveIcons(render)
+        };
+      },
+      hooks() {
+        return {
+          mutationObserverCallbacks(accumulator) {
+            accumulator.treeCallback = onTree;
+            accumulator.nodeCallback = onNode;
+            return accumulator;
+          }
+        };
+      },
+      provides(providers$$1) {
+        providers$$1.i2svg = function(params) {
+          const {
+            node = DOCUMENT,
+            callback = () => {
+            }
+          } = params;
+          return onTree(node, callback);
+        };
+        providers$$1.generateSvgReplacementMutation = function(node, nodeMeta) {
+          const {
+            iconName,
+            title,
+            titleId,
+            prefix,
+            transform,
+            symbol,
+            mask,
+            maskId,
+            extra
+          } = nodeMeta;
+          return new Promise((resolve2, reject) => {
+            Promise.all([findIcon(iconName, prefix), mask.iconName ? findIcon(mask.iconName, mask.prefix) : Promise.resolve({
+              found: false,
+              width: 512,
+              height: 512,
+              icon: {}
+            })]).then((_ref) => {
+              let [main, mask2] = _ref;
+              resolve2([node, makeInlineSvgAbstract({
+                icons: {
+                  main,
+                  mask: mask2
+                },
+                prefix,
+                iconName,
+                transform,
+                symbol,
+                maskId,
+                title,
+                titleId,
+                extra,
+                watchable: true
+              })]);
+            }).catch(reject);
+          });
+        };
+        providers$$1.generateAbstractIcon = function(_ref2) {
+          let {
+            children,
+            attributes,
+            main,
+            transform,
+            styles: styles2
+          } = _ref2;
+          const styleString = joinStyles(styles2);
+          if (styleString.length > 0) {
+            attributes["style"] = styleString;
+          }
+          let nextChild;
+          if (transformIsMeaningful(transform)) {
+            nextChild = callProvided("generateAbstractTransformGrouping", {
+              main,
+              transform,
+              containerWidth: main.width,
+              iconWidth: main.width
+            });
+          }
+          children.push(nextChild || main.icon);
+          return {
+            children,
+            attributes
+          };
+        };
+      }
+    };
+    Layers = {
+      mixout() {
+        return {
+          layer(assembler) {
+            let params = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+            const {
+              classes = []
+            } = params;
+            return domVariants({
+              type: "layer"
+            }, () => {
+              callHooks("beforeDOMElementCreation", {
+                assembler,
+                params
+              });
+              let children = [];
+              assembler((args) => {
+                Array.isArray(args) ? args.map((a2) => {
+                  children = children.concat(a2.abstract);
+                }) : children = children.concat(args.abstract);
+              });
+              return [{
+                tag: "span",
+                attributes: {
+                  class: ["".concat(config.cssPrefix, "-layers"), ...classes].join(" ")
+                },
+                children
+              }];
+            });
+          }
+        };
+      }
+    };
+    LayersCounter = {
+      mixout() {
+        return {
+          counter(content) {
+            let params = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+            const {
+              title = null,
+              classes = [],
+              attributes = {},
+              styles: styles2 = {}
+            } = params;
+            return domVariants({
+              type: "counter",
+              content
+            }, () => {
+              callHooks("beforeDOMElementCreation", {
+                content,
+                params
+              });
+              return makeLayersCounterAbstract({
+                content: content.toString(),
+                title,
+                extra: {
+                  attributes,
+                  styles: styles2,
+                  classes: ["".concat(config.cssPrefix, "-layers-counter"), ...classes]
+                }
+              });
+            });
+          }
+        };
+      }
+    };
+    LayersText = {
+      mixout() {
+        return {
+          text(content) {
+            let params = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : {};
+            const {
+              transform = meaninglessTransform,
+              title = null,
+              classes = [],
+              attributes = {},
+              styles: styles2 = {}
+            } = params;
+            return domVariants({
+              type: "text",
+              content
+            }, () => {
+              callHooks("beforeDOMElementCreation", {
+                content,
+                params
+              });
+              return makeLayersTextAbstract({
+                content,
+                transform: {
+                  ...meaninglessTransform,
+                  ...transform
+                },
+                title,
+                extra: {
+                  attributes,
+                  styles: styles2,
+                  classes: ["".concat(config.cssPrefix, "-layers-text"), ...classes]
+                }
+              });
+            });
+          }
+        };
+      },
+      provides(providers$$1) {
+        providers$$1.generateLayersText = function(node, nodeMeta) {
+          const {
+            title,
+            transform,
+            extra
+          } = nodeMeta;
+          let width = null;
+          let height = null;
+          if (IS_IE) {
+            const computedFontSize = parseInt(getComputedStyle(node).fontSize, 10);
+            const boundingClientRect = node.getBoundingClientRect();
+            width = boundingClientRect.width / computedFontSize;
+            height = boundingClientRect.height / computedFontSize;
+          }
+          if (config.autoA11y && !title) {
+            extra.attributes["aria-hidden"] = "true";
+          }
+          return Promise.resolve([node, makeLayersTextAbstract({
+            content: node.innerHTML,
+            width,
+            height,
+            transform,
+            title,
+            extra,
+            watchable: true
+          })]);
+        };
+      }
+    };
+    CLEAN_CONTENT_PATTERN = new RegExp('"', "ug");
+    SECONDARY_UNICODE_RANGE = [1105920, 1112319];
+    _FONT_FAMILY_WEIGHT_TO_PREFIX = {
+      ...{
+        FontAwesome: {
+          normal: "fas",
+          400: "fas"
+        }
+      },
+      ...eo,
+      ...ao,
+      ...mo
+    };
+    FONT_FAMILY_WEIGHT_TO_PREFIX = Object.keys(_FONT_FAMILY_WEIGHT_TO_PREFIX).reduce((acc, key2) => {
+      acc[key2.toLowerCase()] = _FONT_FAMILY_WEIGHT_TO_PREFIX[key2];
+      return acc;
+    }, {});
+    FONT_FAMILY_WEIGHT_FALLBACK = Object.keys(FONT_FAMILY_WEIGHT_TO_PREFIX).reduce((acc, fontFamily) => {
+      const weights = FONT_FAMILY_WEIGHT_TO_PREFIX[fontFamily];
+      acc[fontFamily] = weights[900] || [...Object.entries(weights)][0][1];
+      return acc;
+    }, {});
+    PseudoElements = {
+      hooks() {
+        return {
+          mutationObserverCallbacks(accumulator) {
+            accumulator.pseudoElementsCallback = searchPseudoElements;
+            return accumulator;
+          }
+        };
+      },
+      provides(providers2) {
+        providers2.pseudoElements2svg = function(params) {
+          const {
+            node = DOCUMENT
+          } = params;
+          if (config.searchPseudoElements) {
+            searchPseudoElements(node);
+          }
+        };
+      }
+    };
+    _unwatched = false;
+    MutationObserver$1 = {
+      mixout() {
+        return {
+          dom: {
+            unwatch() {
+              disableObservation();
+              _unwatched = true;
+            }
+          }
+        };
+      },
+      hooks() {
+        return {
+          bootstrap() {
+            observe(chainHooks("mutationObserverCallbacks", {}));
+          },
+          noAuto() {
+            disconnect();
+          },
+          watch(params) {
+            const {
+              observeMutationsRoot
+            } = params;
+            if (_unwatched) {
+              enableObservation();
+            } else {
+              observe(chainHooks("mutationObserverCallbacks", {
+                observeMutationsRoot
+              }));
+            }
+          }
+        };
+      }
+    };
+    parseTransformString = (transformString) => {
+      let transform = {
+        size: 16,
+        x: 0,
+        y: 0,
+        flipX: false,
+        flipY: false,
+        rotate: 0
+      };
+      return transformString.toLowerCase().split(" ").reduce((acc, n2) => {
+        const parts = n2.toLowerCase().split("-");
+        const first = parts[0];
+        let rest = parts.slice(1).join("-");
+        if (first && rest === "h") {
+          acc.flipX = true;
+          return acc;
+        }
+        if (first && rest === "v") {
+          acc.flipY = true;
+          return acc;
+        }
+        rest = parseFloat(rest);
+        if (isNaN(rest)) {
+          return acc;
+        }
+        switch (first) {
+          case "grow":
+            acc.size = acc.size + rest;
+            break;
+          case "shrink":
+            acc.size = acc.size - rest;
+            break;
+          case "left":
+            acc.x = acc.x - rest;
+            break;
+          case "right":
+            acc.x = acc.x + rest;
+            break;
+          case "up":
+            acc.y = acc.y - rest;
+            break;
+          case "down":
+            acc.y = acc.y + rest;
+            break;
+          case "rotate":
+            acc.rotate = acc.rotate + rest;
+            break;
+        }
+        return acc;
+      }, transform);
+    };
+    PowerTransforms = {
+      mixout() {
+        return {
+          parse: {
+            transform: (transformString) => {
+              return parseTransformString(transformString);
+            }
+          }
+        };
+      },
+      hooks() {
+        return {
+          parseNodeAttributes(accumulator, node) {
+            const transformString = node.getAttribute("data-fa-transform");
+            if (transformString) {
+              accumulator.transform = parseTransformString(transformString);
+            }
+            return accumulator;
+          }
+        };
+      },
+      provides(providers2) {
+        providers2.generateAbstractTransformGrouping = function(_ref) {
+          let {
+            main,
+            transform,
+            containerWidth,
+            iconWidth
+          } = _ref;
+          const outer = {
+            transform: "translate(".concat(containerWidth / 2, " 256)")
+          };
+          const innerTranslate = "translate(".concat(transform.x * 32, ", ").concat(transform.y * 32, ") ");
+          const innerScale = "scale(".concat(transform.size / 16 * (transform.flipX ? -1 : 1), ", ").concat(transform.size / 16 * (transform.flipY ? -1 : 1), ") ");
+          const innerRotate = "rotate(".concat(transform.rotate, " 0 0)");
+          const inner = {
+            transform: "".concat(innerTranslate, " ").concat(innerScale, " ").concat(innerRotate)
+          };
+          const path = {
+            transform: "translate(".concat(iconWidth / 2 * -1, " -256)")
+          };
+          const operations = {
+            outer,
+            inner,
+            path
+          };
+          return {
+            tag: "g",
+            attributes: {
+              ...operations.outer
+            },
+            children: [{
+              tag: "g",
+              attributes: {
+                ...operations.inner
+              },
+              children: [{
+                tag: main.icon.tag,
+                children: main.icon.children,
+                attributes: {
+                  ...main.icon.attributes,
+                  ...operations.path
+                }
+              }]
+            }]
+          };
+        };
+      }
+    };
+    ALL_SPACE = {
+      x: 0,
+      y: 0,
+      width: "100%",
+      height: "100%"
+    };
+    Masks = {
+      hooks() {
+        return {
+          parseNodeAttributes(accumulator, node) {
+            const maskData = node.getAttribute("data-fa-mask");
+            const mask = !maskData ? emptyCanonicalIcon() : getCanonicalIcon(maskData.split(" ").map((i) => i.trim()));
+            if (!mask.prefix) {
+              mask.prefix = getDefaultUsablePrefix();
+            }
+            accumulator.mask = mask;
+            accumulator.maskId = node.getAttribute("data-fa-mask-id");
+            return accumulator;
+          }
+        };
+      },
+      provides(providers2) {
+        providers2.generateAbstractMask = function(_ref) {
+          let {
+            children,
+            attributes,
+            main,
+            mask,
+            maskId: explicitMaskId,
+            transform
+          } = _ref;
+          const {
+            width: mainWidth,
+            icon: mainPath
+          } = main;
+          const {
+            width: maskWidth,
+            icon: maskPath
+          } = mask;
+          const trans = transformForSvg({
+            transform,
+            containerWidth: maskWidth,
+            iconWidth: mainWidth
+          });
+          const maskRect = {
+            tag: "rect",
+            attributes: {
+              ...ALL_SPACE,
+              fill: "white"
+            }
+          };
+          const maskInnerGroupChildrenMixin = mainPath.children ? {
+            children: mainPath.children.map(fillBlack)
+          } : {};
+          const maskInnerGroup = {
+            tag: "g",
+            attributes: {
+              ...trans.inner
+            },
+            children: [fillBlack({
+              tag: mainPath.tag,
+              attributes: {
+                ...mainPath.attributes,
+                ...trans.path
+              },
+              ...maskInnerGroupChildrenMixin
+            })]
+          };
+          const maskOuterGroup = {
+            tag: "g",
+            attributes: {
+              ...trans.outer
+            },
+            children: [maskInnerGroup]
+          };
+          const maskId = "mask-".concat(explicitMaskId || nextUniqueId());
+          const clipId = "clip-".concat(explicitMaskId || nextUniqueId());
+          const maskTag = {
+            tag: "mask",
+            attributes: {
+              ...ALL_SPACE,
+              id: maskId,
+              maskUnits: "userSpaceOnUse",
+              maskContentUnits: "userSpaceOnUse"
+            },
+            children: [maskRect, maskOuterGroup]
+          };
+          const defs = {
+            tag: "defs",
+            children: [{
+              tag: "clipPath",
+              attributes: {
+                id: clipId
+              },
+              children: deGroup(maskPath)
+            }, maskTag]
+          };
+          children.push(defs, {
+            tag: "rect",
+            attributes: {
+              fill: "currentColor",
+              "clip-path": "url(#".concat(clipId, ")"),
+              mask: "url(#".concat(maskId, ")"),
+              ...ALL_SPACE
+            }
+          });
+          return {
+            children,
+            attributes
+          };
+        };
+      }
+    };
+    MissingIconIndicator = {
+      provides(providers2) {
+        let reduceMotion = false;
+        if (WINDOW.matchMedia) {
+          reduceMotion = WINDOW.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        }
+        providers2.missingIconAbstract = function() {
+          const gChildren = [];
+          const FILL = {
+            fill: "currentColor"
+          };
+          const ANIMATION_BASE = {
+            attributeType: "XML",
+            repeatCount: "indefinite",
+            dur: "2s"
+          };
+          gChildren.push({
+            tag: "path",
+            attributes: {
+              ...FILL,
+              d: "M156.5,447.7l-12.6,29.5c-18.7-9.5-35.9-21.2-51.5-34.9l22.7-22.7C127.6,430.5,141.5,440,156.5,447.7z M40.6,272H8.5 c1.4,21.2,5.4,41.7,11.7,61.1L50,321.2C45.1,305.5,41.8,289,40.6,272z M40.6,240c1.4-18.8,5.2-37,11.1-54.1l-29.5-12.6 C14.7,194.3,10,216.7,8.5,240H40.6z M64.3,156.5c7.8-14.9,17.2-28.8,28.1-41.5L69.7,92.3c-13.7,15.6-25.5,32.8-34.9,51.5 L64.3,156.5z M397,419.6c-13.9,12-29.4,22.3-46.1,30.4l11.9,29.8c20.7-9.9,39.8-22.6,56.9-37.6L397,419.6z M115,92.4 c13.9-12,29.4-22.3,46.1-30.4l-11.9-29.8c-20.7,9.9-39.8,22.6-56.8,37.6L115,92.4z M447.7,355.5c-7.8,14.9-17.2,28.8-28.1,41.5 l22.7,22.7c13.7-15.6,25.5-32.9,34.9-51.5L447.7,355.5z M471.4,272c-1.4,18.8-5.2,37-11.1,54.1l29.5,12.6 c7.5-21.1,12.2-43.5,13.6-66.8H471.4z M321.2,462c-15.7,5-32.2,8.2-49.2,9.4v32.1c21.2-1.4,41.7-5.4,61.1-11.7L321.2,462z M240,471.4c-18.8-1.4-37-5.2-54.1-11.1l-12.6,29.5c21.1,7.5,43.5,12.2,66.8,13.6V471.4z M462,190.8c5,15.7,8.2,32.2,9.4,49.2h32.1 c-1.4-21.2-5.4-41.7-11.7-61.1L462,190.8z M92.4,397c-12-13.9-22.3-29.4-30.4-46.1l-29.8,11.9c9.9,20.7,22.6,39.8,37.6,56.9 L92.4,397z M272,40.6c18.8,1.4,36.9,5.2,54.1,11.1l12.6-29.5C317.7,14.7,295.3,10,272,8.5V40.6z M190.8,50 c15.7-5,32.2-8.2,49.2-9.4V8.5c-21.2,1.4-41.7,5.4-61.1,11.7L190.8,50z M442.3,92.3L419.6,115c12,13.9,22.3,29.4,30.5,46.1 l29.8-11.9C470,128.5,457.3,109.4,442.3,92.3z M397,92.4l22.7-22.7c-15.6-13.7-32.8-25.5-51.5-34.9l-12.6,29.5 C370.4,72.1,384.4,81.5,397,92.4z"
+            }
+          });
+          const OPACITY_ANIMATE = {
+            ...ANIMATION_BASE,
+            attributeName: "opacity"
+          };
+          const dot = {
+            tag: "circle",
+            attributes: {
+              ...FILL,
+              cx: "256",
+              cy: "364",
+              r: "28"
+            },
+            children: []
+          };
+          if (!reduceMotion) {
+            dot.children.push({
+              tag: "animate",
+              attributes: {
+                ...ANIMATION_BASE,
+                attributeName: "r",
+                values: "28;14;28;28;14;28;"
+              }
+            }, {
+              tag: "animate",
+              attributes: {
+                ...OPACITY_ANIMATE,
+                values: "1;0;1;1;0;1;"
+              }
+            });
+          }
+          gChildren.push(dot);
+          gChildren.push({
+            tag: "path",
+            attributes: {
+              ...FILL,
+              opacity: "1",
+              d: "M263.7,312h-16c-6.6,0-12-5.4-12-12c0-71,77.4-63.9,77.4-107.8c0-20-17.8-40.2-57.4-40.2c-29.1,0-44.3,9.6-59.2,28.7 c-3.9,5-11.1,6-16.2,2.4l-13.1-9.2c-5.6-3.9-6.9-11.8-2.6-17.2c21.2-27.2,46.4-44.7,91.2-44.7c52.3,0,97.4,29.8,97.4,80.2 c0,67.6-77.4,63.5-77.4,107.8C275.7,306.6,270.3,312,263.7,312z"
+            },
+            children: reduceMotion ? [] : [{
+              tag: "animate",
+              attributes: {
+                ...OPACITY_ANIMATE,
+                values: "1;0;0;0;0;1;"
+              }
+            }]
+          });
+          if (!reduceMotion) {
+            gChildren.push({
+              tag: "path",
+              attributes: {
+                ...FILL,
+                opacity: "0",
+                d: "M232.5,134.5l7,168c0.3,6.4,5.6,11.5,12,11.5h9c6.4,0,11.7-5.1,12-11.5l7-168c0.3-6.8-5.2-12.5-12-12.5h-23 C237.7,122,232.2,127.7,232.5,134.5z"
+              },
+              children: [{
+                tag: "animate",
+                attributes: {
+                  ...OPACITY_ANIMATE,
+                  values: "0;0;1;1;0;0;"
+                }
+              }]
+            });
+          }
+          return {
+            tag: "g",
+            attributes: {
+              "class": "missing"
+            },
+            children: gChildren
+          };
+        };
+      }
+    };
+    SvgSymbols = {
+      hooks() {
+        return {
+          parseNodeAttributes(accumulator, node) {
+            const symbolData = node.getAttribute("data-fa-symbol");
+            const symbol = symbolData === null ? false : symbolData === "" ? true : symbolData;
+            accumulator["symbol"] = symbol;
+            return accumulator;
+          }
+        };
+      }
+    };
+    plugins = [InjectCSS, ReplaceElements, Layers, LayersCounter, LayersText, PseudoElements, MutationObserver$1, PowerTransforms, Masks, MissingIconIndicator, SvgSymbols];
+    registerPlugins(plugins, {
+      mixoutsTo: api
+    });
+    noAuto$1 = api.noAuto;
+    config$1 = api.config;
+    library$1 = api.library;
+    dom$1 = api.dom;
+    parse$1 = api.parse;
+    findIconDefinition$1 = api.findIconDefinition;
+    toHtml$1 = api.toHtml;
+    icon = api.icon;
+    layer = api.layer;
+    text2 = api.text;
+    counter = api.counter;
   }
 });
 
@@ -880,46 +3724,46 @@ function loop(callback) {
 function is_date(obj) {
   return Object.prototype.toString.call(obj) === "[object Date]";
 }
-function cubicOut(t2) {
-  const f = t2 - 1;
+function cubicOut(t3) {
+  const f = t3 - 1;
   return f * f * f + 1;
 }
-function get_interpolator(a, b) {
-  if (a === b || a !== a) return () => a;
-  const type = typeof a;
-  if (type !== typeof b || Array.isArray(a) !== Array.isArray(b)) {
+function get_interpolator(a2, b) {
+  if (a2 === b || a2 !== a2) return () => a2;
+  const type = typeof a2;
+  if (type !== typeof b || Array.isArray(a2) !== Array.isArray(b)) {
     throw new Error("Cannot interpolate values of different type");
   }
-  if (Array.isArray(a)) {
+  if (Array.isArray(a2)) {
     const arr = b.map((bi, i) => {
-      return get_interpolator(a[i], bi);
+      return get_interpolator(a2[i], bi);
     });
-    return (t2) => arr.map((fn) => fn(t2));
+    return (t3) => arr.map((fn) => fn(t3));
   }
   if (type === "object") {
-    if (!a || !b) throw new Error("Object cannot be null");
-    if (is_date(a) && is_date(b)) {
-      a = a.getTime();
+    if (!a2 || !b) throw new Error("Object cannot be null");
+    if (is_date(a2) && is_date(b)) {
+      a2 = a2.getTime();
       b = b.getTime();
-      const delta = b - a;
-      return (t2) => new Date(a + t2 * delta);
+      const delta = b - a2;
+      return (t3) => new Date(a2 + t3 * delta);
     }
     const keys = Object.keys(b);
     const interpolators = {};
     keys.forEach((key2) => {
-      interpolators[key2] = get_interpolator(a[key2], b[key2]);
+      interpolators[key2] = get_interpolator(a2[key2], b[key2]);
     });
-    return (t2) => {
+    return (t3) => {
       const result = {};
       keys.forEach((key2) => {
-        result[key2] = interpolators[key2](t2);
+        result[key2] = interpolators[key2](t3);
       });
       return result;
     };
   }
   if (type === "number") {
-    const delta = b - a;
-    return (t2) => a + t2 * delta;
+    const delta = b - a2;
+    return (t3) => a2 + t3 * delta;
   }
   throw new Error(`Cannot interpolate ${type} values`);
 }
@@ -979,19 +3823,139 @@ function tweened(value, defaults = {}) {
     subscribe: store.subscribe
   };
 }
-var is_client, now, raf, tasks, css$2, Modal, css$1, InstructionCard, css, dragSensitivity, scrollSensitivity, Main, Page;
+function classList(props) {
+  const {
+    beat,
+    fade,
+    beatFade,
+    bounce,
+    shake,
+    flash,
+    spin,
+    spinPulse,
+    spinReverse,
+    pulse,
+    fixedWidth,
+    inverse,
+    border,
+    listItem,
+    flip,
+    size,
+    rotation,
+    pull
+  } = props;
+  const classes = {
+    "fa-beat": beat,
+    "fa-fade": fade,
+    "fa-beat-fade": beatFade,
+    "fa-bounce": bounce,
+    "fa-shake": shake,
+    "fa-flash": flash,
+    "fa-spin": spin,
+    "fa-spin-reverse": spinReverse,
+    "fa-spin-pulse": spinPulse,
+    "fa-pulse": pulse,
+    "fa-fw": fixedWidth,
+    "fa-inverse": inverse,
+    "fa-border": border,
+    "fa-li": listItem,
+    "fa-flip": flip === true,
+    "fa-flip-horizontal": flip === "horizontal" || flip === "both",
+    "fa-flip-vertical": flip === "vertical" || flip === "both",
+    [`fa-${size}`]: typeof size !== "undefined" && size !== null,
+    [`fa-rotate-${rotation}`]: typeof rotation !== "undefined" && rotation !== null && rotation !== 0,
+    [`fa-pull-${pull}`]: typeof pull !== "undefined" && pull !== null,
+    "fa-swap-opacity": props.swapOpacity
+  };
+  return Object.keys(classes).map((key2) => classes[key2] ? key2 : null).filter((key2) => key2);
+}
+function _isNumerical(obj) {
+  obj = obj - 0;
+  return obj === obj;
+}
+function camelize(string) {
+  if (_isNumerical(string)) {
+    return string;
+  }
+  string = string.replace(/[\-_\s]+(.)?/g, function(match, chr) {
+    return chr ? chr.toUpperCase() : "";
+  });
+  return string.substr(0, 1).toLowerCase() + string.substr(1);
+}
+function styleToString(style) {
+  if (typeof style === "string") {
+    return style;
+  }
+  return Object.keys(style).reduce((acc, key2) => acc + key2.split(/(?=[A-Z])/).join("-").toLowerCase() + ":" + style[key2] + ";", "");
+}
+function convert(createElement2, element, extraProps = {}) {
+  if (typeof element === "string") {
+    return element;
+  }
+  const children = (element.children || []).map((child) => {
+    return convert(createElement2, child);
+  });
+  const mixins = Object.keys(element.attributes || {}).reduce(
+    (acc, key2) => {
+      const val = element.attributes[key2];
+      if (key2 === "style") {
+        acc.attrs["style"] = styleToString(val);
+      } else {
+        if (key2.indexOf("aria-") === 0 || key2.indexOf("data-") === 0) {
+          acc.attrs[key2.toLowerCase()] = val;
+        } else {
+          acc.attrs[camelize(key2)] = val;
+        }
+      }
+      return acc;
+    },
+    { attrs: {} }
+  );
+  return createElement2(element.tag, { ...mixins.attrs }, children);
+}
+function log(...args) {
+  if (!PRODUCTION2 && console && typeof console.error === "function") {
+    console.error(...args);
+  }
+}
+function normalizeIconArgs(icon2) {
+  if (icon2 && typeof icon2 === "object" && icon2.prefix && icon2.iconName && icon2.icon) {
+    return icon2;
+  }
+  if (parse$1.icon) {
+    return parse$1.icon(icon2);
+  }
+  if (icon2 === null) {
+    return null;
+  }
+  if (icon2 && typeof icon2 === "object" && icon2.prefix && icon2.iconName) {
+    return icon2;
+  }
+  if (Array.isArray(icon2) && icon2.length === 2) {
+    return { prefix: icon2[0], iconName: icon2[1] };
+  }
+  if (typeof icon2 === "string") {
+    return { prefix: "fas", iconName: icon2 };
+  }
+}
+function objectWithKey(key2, value) {
+  return Array.isArray(value) && value.length > 0 || !Array.isArray(value) && value ? { [key2]: value } : {};
+}
+var is_client, now, raf, tasks, css$2, Modal, css$1, InstructionCard, PRODUCTION2, SvgElement, FontAwesomeIcon, css2, dragSensitivity, scrollSensitivity, Main, Page;
 var init_page_svelte = __esm({
   ".svelte-kit/output/server/entries/pages/_page.svelte.js"() {
     init_ssr();
     init_client();
     init_chunks();
+    init_free_solid_svg_icons();
+    init_fontawesome_svg_core();
     is_client = typeof window !== "undefined";
     now = is_client ? () => window.performance.now() : () => Date.now();
     raf = is_client ? (cb) => requestAnimationFrame(cb) : noop;
     tasks = /* @__PURE__ */ new Set();
     css$2 = {
-      code: ".modal-overlay.svelte-1h14j69{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0, 0, 0, 0.5);z-index:999}.cover-image-container.svelte-1h14j69{position:relative;width:100%;height:300px;overflow:hidden;margin-bottom:20px}.cover-image.svelte-1h14j69{width:100%;height:100%;object-fit:cover;object-position:center}.modal-content.svelte-1h14j69{display:flex;justify-content:center}.modal.svelte-1h14j69{display:block;position:fixed;z-index:1;padding-top:60px;left:0;top:0;width:100%;height:100%;overflow:hidden;overflow-y:hidden;background-color:rgba(0, 0, 0, 0.4);opacity:1;transform-origin:center center;transition:opacity 0.3s ease, transform 0.3s ease;position:fixed;background:white;z-index:1000;transition:all 0.3s ease}.fade-out.svelte-1h14j69{opacity:0}.modal-image.svelte-1h14j69{position:absolute;top:0;left:0;width:100%;height:100%;background-color:#000000;z-index:0}.close.svelte-1h14j69{color:#aaa;float:right;font-size:28px;font-weight:bold}.close.svelte-1h14j69:hover,.close.svelte-1h14j69:focus{text-decoration:none;cursor:pointer}.modal-text.svelte-1h14j69{position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);padding:20px;border-radius:10px;text-align:Left;width:100%;height:100%;color:white;overflow-y:scroll;margin:10px}h1.svelte-1h14j69{font-size:3.5em;margin:5px}@media(max-width: 600px){h1.svelte-1h14j69{font-size:2.5em}img.svelte-1h14j69{width:100%;height:auto}}.modal-text.svelte-1h14j69::-webkit-scrollbar{width:2px;border-radius:80%}.modal-text.svelte-1h14j69::-webkit-scrollbar-track{background:#000000;width:0;visibility:hidden}.modal-text.svelte-1h14j69::-webkit-scrollbar-thumb{background:#ffffff;border-radius:2px}.content-container.svelte-1h14j69{flex:1;padding-right:20px;overflow-y:hidden}",
-      map: `{"version":3,"file":"Modal.svelte","sources":["Modal.svelte"],"sourcesContent":["<script>\\n  import { onMount, onDestroy } from 'svelte';\\n  import { tweened } from 'svelte/motion';\\n  import { cubicOut } from 'svelte/easing';\\n  import  Toc from './Toc.svelte'\\n  export let id;\\n  export let onClose;\\n  export let dimensions;\\n\\n  const size = tweened(\\n    { width: dimensions.width, height: dimensions.height, top: dimensions.top, left: dimensions.left },\\n    { duration: 2, easing: cubicOut }\\n  );\\n\\n  let content;\\n  let isClosing = false;\\n  let tocHtml = '';\\n  let modalElement;\\n  const modalsData = {\\n    modal1: {\\n      title: 'Engineering',\\n      content: \`\\n      <section>\\n        <h2> The Design Process</h2>\\n        <p> Our Design Process consists of 5 stages: </p>\\n        <ol>\\n          <li> Research </li>\\n          <li> Design </li>\\n          <li> Prototype </li>\\n          <li> Test </li>\\n          <li> Launch </li>\\n        </ol>\\n      </section>\\n      \\n\\n<style>\\n  a {\\n    color:white;\\n    text-decoration: underline;\\n  }\\n  </style>\\n\\n\\n\\n      \`,\\n      image: \\"/d41586-024-02191-1_27293496.jpg\\"\\n    },\\n    modal2: {\\n      title: 'Sample',\\n      content: \`\\n      <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/Ad01.jpg\\"\\n    },\\n    modal3: {\\n      title: 'Sample',\\n      content: \`\\n\\n     <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/HTML.webp\\"\\n    },\\n    modal4: {\\n      title: 'Sample',\\n      content: \`\\n     <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/AiEmer.jpg\\"\\n    },\\n    modal5: {\\n      title: 'Sample',\\n      content: \`\\n      <h2>Sample</h2>\\n    <p>Sample</p>\\n      \`,\\n      image: \\"/amazon.jpeg\\"\\n    }\\n  };\\n\\n  onMount(() => {\\n    // Start at the image size\\n    modalElement.style.width = \`\${dimensions.width}px\`;\\n    modalElement.style.height = \`\${dimensions.height}px\`;\\n    modalElement.style.top = \`\${dimensions.top}px\`;\\n    modalElement.style.left = \`\${dimensions.left}px\`;\\n    // Animate to full screen after a short delay\\n    setTimeout(() => {\\n      size.set({ width: window.innerWidth, height: window.innerHeight, top: 0, left: 0 });\\n    }, 50);\\n    window.addEventListener('resize', handleResize);\\n  });\\n\\n  onDestroy(() => {\\n  // Remove resize event listener\\n  window.removeEventListener('resize', handleResize);\\n  });\\n  function handleClose() {\\n    isClosing = true;\\n    // Animate back to original size\\n    size.set({ width: dimensions.width, height: dimensions.height, top: dimensions.top, left: dimensions.left })\\n      .then(() => {\\n        if (typeof onClose === 'function') {\\n          onClose();\\n        }\\n        isClosing = false;\\n      });\\n  }\\n\\n\\n  function handleResize() {\\n  if (modalElement) {\\n    size.set({ width: window.innerWidth, height: window.innerHeight, top: 0, left: 0 });\\n  }\\n}\\n\\n\\nfunction generateTOC(content) {\\n  const tempDiv = document.createElement('div');\\n  tempDiv.innerHTML = content;\\n  const headings = tempDiv.querySelectorAll('h2, h3');\\n   let tocHtml = '';\\n  headings.forEach((heading, index) => {\\n    const level = heading.tagName.toLowerCase();\\n    const text = heading.textContent;\\n    const id = \`section-\${index}\`; // Generate unique ID for each section\\n   heading.id = id; // Assign ID to the heading for linking\\n    const listItem = \`<li><a href=\\"#\${id}\\"><\${level}>\${text}</\${level}></a></li>\`;\\n    tocHtml += listItem;\\n  });\\n  return \`<ul>\${tocHtml}</ul>\`;\\n}\\n\\nfunction scrollToSection(id) {\\n  const section = document.getElementById(id);\\n    if (section) {\\n      section.scrollIntoView({ behavior: 'smooth' });\\n    }\\n}\\n\\n\\n\\n\\n\\n\\n\\n\\n<\/script>\\n<div class=\\"modal-overlay\\" class:fade-out={isClosing} on:click={handleClose}></div>\\n<div\\n  bind:this={modalElement}\\n  class=\\"modal\\"\\n  class:fade-out={isClosing}\\n  id={id}\\n  style=\\"width: {$size.width}px; height: {$size.height}px; top: {$size.top}px; left: {$size.left}px;\\"\\n>\\n  <div class=\\"modal-image\\"></div>\\n  <div class='modal-content'>\\n    <span class=\\"close\\" id='closecross' on:click={handleClose}>&times;</span>\\n    <div class=\\"modal-text\\">\\n      {#if modalsData[id].image}\\n      <div class=\\"cover-image-container\\">\\n        <img src={modalsData[id].image} alt={modalsData[id].title} class='cover-image' />\\n      </div>\\n      {/if}\\n      <h1>{modalsData[id].title}</h1>\\n      <div class=\\"content-container\\">\\n        <hr>\\n        <div class=\\"content\\">\\n          {@html modalsData[id].content}\\n        </div>\\n      </div>\\n    </div>\\n  </div>\\n</div>\\n\\n<style>\\n.modal-overlay {\\n    position: fixed;\\n    top: 0;\\n    left: 0;\\n    width: 100%;\\n    height: 100%;\\n    background: rgba(0, 0, 0, 0.5);\\n    z-index: 999;\\n  }\\n  .cover-image-container {\\n  position: relative;\\n  width: 100%;\\n  height: 300px; /* Adjust height as needed */\\n  overflow: hidden;\\n  margin-bottom: 20px;\\n}\\n\\n.cover-image {\\n  width: 100%;\\n  height: 100%;\\n  object-fit: cover;\\n  object-position: center;\\n}\\n  .modal-content {\\n    display: flex;\\n    justify-content: center;\\n  }\\n  .modal {\\n    display: block;\\n    position: fixed;\\n    z-index: 1;\\n    padding-top: 60px;\\n    left: 0;\\n    top: 0;\\n    width: 100%;\\n    height: 100%;\\n    overflow: hidden;\\n    overflow-y: hidden;\\n    background-color: rgba(0, 0, 0, 0.4);\\n    opacity: 1;\\n    transform-origin: center center;\\n    transition: opacity 0.3s ease, transform 0.3s ease;\\n    position: fixed;\\n    background: white;\\n    z-index: 1000;\\n    transition: all 0.3s ease;\\n    \\n  }\\n  .scale-in {\\n    opacity: 1;\\n    transform: scale(1);\\n  }\\n  .scale-out {\\n    opacity: 0;\\n    transform: scale(0.5);\\n  }\\n  .container {\\n    overflow: visible;\\n    margin: 0;\\n    padding: 0;\\n    width: 100%;\\n    height: 100%;\\n  }\\n  .fade-in {\\n    opacity: 1;\\n  }\\n  .fade-out {\\n    opacity: 0;\\n  }\\n  .modal-image {\\n    position: absolute;\\n    top: 0;\\n    left: 0;\\n    width: 100%;\\n    height: 100%;\\n    background-color: #000000;\\n    z-index: 0;\\n  }\\n\\n  .close {\\n    color: #aaa;\\n    float: right;\\n    font-size: 28px;\\n    font-weight: bold;\\n  }\\n  .close:hover,\\n  .close:focus {\\n    text-decoration: none;\\n    cursor: pointer;\\n  }\\n  .modal-text {\\n    position: absolute;\\n    top: 50%;\\n    left: 50%;\\n    transform: translate(-50%, -50%);\\n    /* background-color: rgba(20, 20, 20, 0.8); */\\n    padding: 20px;\\n    border-radius: 10px;\\n    text-align: Left;\\n    width: 100%;\\n    height: 100%;\\n    color: white;\\n    overflow-y: scroll;\\n    margin: 10px;\\n  }\\n  h1 {\\n    font-size: 3.5em;\\n    margin: 5px;\\n  }\\n  @media (max-width: 600px) {\\n  h1 {\\n    font-size:2.5em;\\n\\n  }\\n  img {\\n    width: 100%;\\n    height: auto;\\n  }\\n}\\n.modal-text::-webkit-scrollbar {\\nwidth: 2px;\\n  border-radius: 80%;\\n}\\n.modal-text::-webkit-scrollbar-track{\\nbackground: #000000;\\n  width:0;\\n  visibility: hidden;\\n}\\n.modal-text::-webkit-scrollbar-thumb {\\nbackground: #ffffff;\\nborder-radius: 2px;\\n}\\n\\n  .content-container {\\n    flex: 1;\\n    padding-right: 20px; /* Adjust spacing between TOC and content */\\n    overflow-y: hidden; /* Allow scrolling if content is too long */\\n  }\\n\\n\\n</style>\\n"],"names":[],"mappings":"AAmLA,6BAAe,CACX,QAAQ,CAAE,KAAK,CACf,GAAG,CAAE,CAAC,CACN,IAAI,CAAE,CAAC,CACP,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,UAAU,CAAE,KAAK,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,GAAG,CAAC,CAC9B,OAAO,CAAE,GACX,CACA,qCAAuB,CACvB,QAAQ,CAAE,QAAQ,CAClB,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,KAAK,CACb,QAAQ,CAAE,MAAM,CAChB,aAAa,CAAE,IACjB,CAEA,2BAAa,CACX,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,UAAU,CAAE,KAAK,CACjB,eAAe,CAAE,MACnB,CACE,6BAAe,CACb,OAAO,CAAE,IAAI,CACb,eAAe,CAAE,MACnB,CACA,qBAAO,CACL,OAAO,CAAE,KAAK,CACd,QAAQ,CAAE,KAAK,CACf,OAAO,CAAE,CAAC,CACV,WAAW,CAAE,IAAI,CACjB,IAAI,CAAE,CAAC,CACP,GAAG,CAAE,CAAC,CACN,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,QAAQ,CAAE,MAAM,CAChB,UAAU,CAAE,MAAM,CAClB,gBAAgB,CAAE,KAAK,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,GAAG,CAAC,CACpC,OAAO,CAAE,CAAC,CACV,gBAAgB,CAAE,MAAM,CAAC,MAAM,CAC/B,UAAU,CAAE,OAAO,CAAC,IAAI,CAAC,IAAI,CAAC,CAAC,SAAS,CAAC,IAAI,CAAC,IAAI,CAClD,QAAQ,CAAE,KAAK,CACf,UAAU,CAAE,KAAK,CACjB,OAAO,CAAE,IAAI,CACb,UAAU,CAAE,GAAG,CAAC,IAAI,CAAC,IAEvB,CAmBA,wBAAU,CACR,OAAO,CAAE,CACX,CACA,2BAAa,CACX,QAAQ,CAAE,QAAQ,CAClB,GAAG,CAAE,CAAC,CACN,IAAI,CAAE,CAAC,CACP,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,gBAAgB,CAAE,OAAO,CACzB,OAAO,CAAE,CACX,CAEA,qBAAO,CACL,KAAK,CAAE,IAAI,CACX,KAAK,CAAE,KAAK,CACZ,SAAS,CAAE,IAAI,CACf,WAAW,CAAE,IACf,CACA,qBAAM,MAAM,CACZ,qBAAM,MAAO,CACX,eAAe,CAAE,IAAI,CACrB,MAAM,CAAE,OACV,CACA,0BAAY,CACV,QAAQ,CAAE,QAAQ,CAClB,GAAG,CAAE,GAAG,CACR,IAAI,CAAE,GAAG,CACT,SAAS,CAAE,UAAU,IAAI,CAAC,CAAC,IAAI,CAAC,CAEhC,OAAO,CAAE,IAAI,CACb,aAAa,CAAE,IAAI,CACnB,UAAU,CAAE,IAAI,CAChB,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,KAAK,CAAE,KAAK,CACZ,UAAU,CAAE,MAAM,CAClB,MAAM,CAAE,IACV,CACA,iBAAG,CACD,SAAS,CAAE,KAAK,CAChB,MAAM,CAAE,GACV,CACA,MAAO,YAAY,KAAK,CAAE,CAC1B,iBAAG,CACD,UAAU,KAEZ,CACA,kBAAI,CACF,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IACV,CACF,CACA,0BAAW,mBAAoB,CAC/B,KAAK,CAAE,GAAG,CACR,aAAa,CAAE,GACjB,CACA,0BAAW,yBAAyB,CACpC,UAAU,CAAE,OAAO,CACjB,MAAM,CAAC,CACP,UAAU,CAAE,MACd,CACA,0BAAW,yBAA0B,CACrC,UAAU,CAAE,OAAO,CACnB,aAAa,CAAE,GACf,CAEE,iCAAmB,CACjB,IAAI,CAAE,CAAC,CACP,aAAa,CAAE,IAAI,CACnB,UAAU,CAAE,MACd"}`
+      code: ".modal-overlay.svelte-1eyv4t2{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0, 0, 0, 0.5);z-index:999}.cover-image-container.svelte-1eyv4t2{position:relative;width:100%;height:300px;overflow:hidden;margin-bottom:20px}.cover-image.svelte-1eyv4t2{width:100%;height:100%;object-fit:cover;object-position:center;filter:brightness(70%)\n}.modal-content.svelte-1eyv4t2{display:flex;justify-content:center}.modal.svelte-1eyv4t2{display:block;position:fixed;z-index:1;padding-top:60px;left:0;top:0;width:100%;height:100%;overflow:hidden;overflow-y:hidden;background-color:rgba(0, 0, 0, 0.4);opacity:1;transform-origin:center center;transition:opacity 0.3s ease, transform 0.3s ease;position:fixed;background:white;z-index:1000;transition:all 0.3s ease}.fade-out.svelte-1eyv4t2{opacity:0}.modal-image.svelte-1eyv4t2{position:absolute;top:0;left:0;width:100%;height:100%;background-color:#000000;z-index:0}.close.svelte-1eyv4t2{color:#fff;float:right;font-size:28px;font-weight:bold}.close.svelte-1eyv4t2:hover,.close.svelte-1eyv4t2:focus{text-decoration:none;cursor:pointer}.modal-text.svelte-1eyv4t2{position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);padding:20px;border-radius:10px;text-align:Left;width:100%;height:100%;color:white;overflow-y:scroll;margin:10px}h1.svelte-1eyv4t2{font-size:3.5em;margin:5px}@media(max-width: 600px){h1.svelte-1eyv4t2{font-size:2.5em}img.svelte-1eyv4t2{width:100%;height:auto}}.modal-text.svelte-1eyv4t2::-webkit-scrollbar{width:2px;border-radius:80%}.modal-text.svelte-1eyv4t2::-webkit-scrollbar-track{background:#000000;width:0;visibility:hidden}.modal-text.svelte-1eyv4t2::-webkit-scrollbar-thumb{background:#ffffff;border-radius:2px}.content-container.svelte-1eyv4t2{flex:1;padding-right:20px;overflow-y:hidden}",
+      map: `{"version":3,"file":"Modal.svelte","sources":["Modal.svelte"],"sourcesContent":["<script>\\n  import { onMount, onDestroy } from 'svelte';\\n  import { tweened } from 'svelte/motion';\\n  import { cubicOut } from 'svelte/easing';\\n  import  Toc from './Toc.svelte'\\n  export let id;\\n  export let onClose;\\n  export let dimensions;\\n\\n  const size = tweened(\\n    { width: dimensions.width, height: dimensions.height, top: dimensions.top, left: dimensions.left },\\n    { duration: 2, easing: cubicOut }\\n  );\\n\\n  let content;\\n  let isClosing = false;\\n  let tocHtml = '';\\n  let modalElement;\\n  const modalsData = {\\n    modal1: {\\n      title: 'Engineering',\\n      content: \`\\n      <section>\\n        <h2> The Design Process</h2>\\n        <p> Our Design Process consists of 5 stages: </p>\\n        <ol>\\n          <li> Research - Gather information on similar CANSAT designs and study requirements for temperature, pressure, and altitude measurements. </li>\\n          <li> Design - Sketch and plan the satellite\u2019s structure, layout, and materials, focusing on durability, weight, and sensor placement. </li>\\n          <li> Prototype - Build an initial model of the CANSAT to test design concepts and ensure all components fit and function as planned. </li>\\n          <li> Test - Run ground and flight tests to assess performance, identifying any issues with data collection or deployment mechanisms. </li>\\n          <li> Launch - Launch the satellite and collect data </li>\\n        </ol>\\n      </section>\\n      <p data-type='exit' class='interactable'>Created bt Arjun</p>\\n\\n<style>\\n  a {\\n    color:white;\\n    text-decoration: underline;\\n  }\\n  </style>\\n\\n\\n\\n      \`,\\n      image: \\"/d41586-024-02191-1_27293496.jpg\\"\\n    },\\n    modal2: {\\n      title: 'Mission Goals',\\n      content: \`\\n  <section>\\n    <h2>The objectives of our CANSAT Mission</h2>\\n    <p>Our CANSAT mission focuses on capturing environmental data, focussing\\n    on temperature, atmospheric pressure and altitude.</p>\\n    <ol>\\n     <li>A barometric pressure sensor will record pressure levels as the CANSAT moves through different layers of the atmosphere. Pressure generally decreases with altitude, and by measuring this gradient, we can accurately determine the altitude of the CANSAT. </li>\\n     <li>Altitude can be determined by combining data from a barometric pressure sensor, which measures atmospheric pressure changes with height, and a GPS module for precise positional data.</li>\\n    </ol>\\n  </section>\\n  <p data-type='video' class='interactable'>Created by Arjun</p>\\n    \\n      \`,\\n      image: \\"Satellite Building.png\\"\\n    },\\n    modal3: {\\n      title: 'Uses of Satellites',\\n      content: \`\\n      <section>\\n     <h2>What do humans use satellites for?</h2>\\n     <uol>\\n       <li>Communication: Satellites enable global connectivity, allowing for phone calls, internet access, and television broadcasts even in remote or rural areas by relaying signals across vast distances.</li>\\n       <li>Weather Monitoring and Climate Study: Satellites provide real-time data on weather patterns, storms, and temperature trends, helping meteorologists forecast weather and scientists monitor climate change and environmental conditions over time.</li>\\n       <li>Navigation and GPS: Satellites are essential for the Global Positioning System (GPS), guiding navigation for vehicles, aircraft, ships, and personal devices, which is crucial for transportation, logistics, and personal travel.</li>\\n     </uol>\\n    <p data-type='exit' class='interactable'>Created by Arjun</p>\\n      \`,\\n      image: \\"Uses of Satellites.jpg\\"\\n    },\\n    modal4: {\\n      title: 'Launch and Deployment',\\n      content: \`\\n      <section>\\n     <h2>How are we going to Launch our Satellite?</h2>\\n     <uol>\\n      <li>Launch Mechanism: Our CANSAT will be launched via a small rocket or high-altitude balloon, which will carry it to the desired altitude before deployment. This launch method ensures the CANSAT reaches a high enough point to simulate the descent phase of an actual satellite.</li>\\n      <li>Deployment Sequence: Once the CANSAT reaches its target altitude, it will be released from the rocket or balloon and begin its descent. During this phase, an automated system will activate sensors and data collection modules, ensuring data is captured from the start of the descent.</li>\\n      <li>Parachute Activation: To control its descent speed and ensure a safe landing, the CANSAT will deploy a small parachute at a specific altitude. This controlled descent allows the satellite to collect data at various atmospheric layers, maximizing the quality and quantity of information we gather.</li>\\n     </uol>\\n    </section>\\n    <p data-type='exit' class='interactable'>Created by Arjun</p>\\n      \`,\\n      image: \\"Satellite Launch.jpeg\\"\\n    },\\n    modal5: {\\n      title: 'Data Analysis',\\n      content: \`\\n      <section>\\n      <h2>What will we do once we have the data?</h2>\\n      <uol>\\n       <li>Data Processing: After retrieval, we will process the collected data by organizing it into readable formats, such as tables and graphs, to visualize temperature, pressure, and altitude changes during the descent, making patterns easier to analyse.</li>\\n       <li>Analysis and Interpretation: Using data analysis techniques, we\u2019ll interpret the trends and compare our findings with expected atmospheric models, assessing any anomalies and understanding how each parameter varies with altitude.</li>\\n       <li>Reporting and Improvement: We\u2019ll compile our findings into a comprehensive report, highlighting key insights and any unexpected results, and use these conclusions to refine our engineering design, sensor calibration, and deployment process for future missions.</li>\\n      </uol>\\n    </section>\\n     <p data-type='exit' class='interactable'>Created by Arjun</p>\\n      \`,\\n      image: \\"Data Analysis.png\\"\\n    }\\n  };\\n\\n  onMount(() => {\\n    // Start at the image size\\n    modalElement.style.width = \`\${dimensions.width}px\`;\\n    modalElement.style.height = \`\${dimensions.height}px\`;\\n    modalElement.style.top = \`\${dimensions.top}px\`;\\n    modalElement.style.left = \`\${dimensions.left}px\`;\\n    // Animate to full screen after a short delay\\n    setTimeout(() => {\\n      size.set({ width: window.innerWidth, height: window.innerHeight, top: 0, left: 0 });\\n    }, 50);\\n    window.addEventListener('resize', handleResize);\\n  });\\n\\n  onDestroy(() => {\\n  // Remove resize event listener\\n  window.removeEventListener('resize', handleResize);\\n  });\\n  function handleClose() {\\n    isClosing = true;\\n    // Animate back to original size\\n    size.set({ width: dimensions.width, height: dimensions.height, top: dimensions.top, left: dimensions.left })\\n      .then(() => {\\n        if (typeof onClose === 'function') {\\n          onClose();\\n        }\\n        isClosing = false;\\n      });\\n  }\\n\\n\\n  function handleResize() {\\n  if (modalElement) {\\n    size.set({ width: window.innerWidth, height: window.innerHeight, top: 0, left: 0 });\\n  }\\n}\\n\\n\\nfunction generateTOC(content) {\\n  const tempDiv = document.createElement('div');\\n  tempDiv.innerHTML = content;\\n  const headings = tempDiv.querySelectorAll('h2, h3');\\n   let tocHtml = '';\\n  headings.forEach((heading, index) => {\\n    const level = heading.tagName.toLowerCase();\\n    const text = heading.textContent;\\n    const id = \`section-\${index}\`; // Generate unique ID for each section\\n   heading.id = id; // Assign ID to the heading for linking\\n    const listItem = \`<li><a href=\\"#\${id}\\"><\${level}>\${text}</\${level}></a></li>\`;\\n    tocHtml += listItem;\\n  });\\n  return \`<ul>\${tocHtml}</ul>\`;\\n}\\n\\nfunction scrollToSection(id) {\\n  const section = document.getElementById(id);\\n    if (section) {\\n      section.scrollIntoView({ behavior: 'smooth' });\\n    }\\n}\\n\\n\\n\\n\\n\\n\\n\\n\\n<\/script>\\n<div class=\\"modal-overlay\\" class:fade-out={isClosing} on:click={handleClose}></div>\\n<div\\n  bind:this={modalElement}\\n  class=\\"modal\\"\\n  class:fade-out={isClosing}\\n  id={id}\\n  style=\\"width: {$size.width}px; height: {$size.height}px; top: {$size.top}px; left: {$size.left}px;\\"\\n>\\n  <div class=\\"modal-image\\"></div>\\n  <div class='modal-content'>\\n    <span class=\\"close interactable\\" id='closecross' data-type=\\"exit\\" on:click={handleClose}> &times;</span>\\n    <div class=\\"modal-text\\">\\n      {#if modalsData[id].image}\\n      <div class=\\"cover-image-container\\">\\n        <img src={modalsData[id].image} alt={modalsData[id].title} class='cover-image' />\\n      </div>\\n      {/if}\\n      <h1>{modalsData[id].title}</h1>\\n      <div class=\\"content-container\\">\\n        <hr>\\n        <div class=\\"content\\">\\n          {@html modalsData[id].content}\\n        </div>\\n      </div>\\n    </div>\\n  </div>\\n</div>\\n\\n<style>\\n.modal-overlay {\\n    position: fixed;\\n    top: 0;\\n    left: 0;\\n    width: 100%;\\n    height: 100%;\\n    background: rgba(0, 0, 0, 0.5);\\n    z-index: 999;\\n  }\\n  .cover-image-container {\\n  position: relative;\\n  width: 100%;\\n  height: 300px; /* Adjust height as needed */\\n  overflow: hidden;\\n  margin-bottom: 20px;\\n}\\n\\n.cover-image {\\n  width: 100%;\\n  height: 100%;\\n  object-fit: cover;\\n  object-position: center;\\n  filter: brightness(70%)\\n}\\n  .modal-content {\\n    display: flex;\\n    justify-content: center;\\n  }\\n  .modal {\\n    display: block;\\n    position: fixed;\\n    z-index: 1;\\n    padding-top: 60px;\\n    left: 0;\\n    top: 0;\\n    width: 100%;\\n    height: 100%;\\n    overflow: hidden;\\n    overflow-y: hidden;\\n    background-color: rgba(0, 0, 0, 0.4);\\n    opacity: 1;\\n    transform-origin: center center;\\n    transition: opacity 0.3s ease, transform 0.3s ease;\\n    position: fixed;\\n    background: white;\\n    z-index: 1000;\\n    transition: all 0.3s ease;\\n    \\n  }\\n  .scale-in {\\n    opacity: 1;\\n    transform: scale(1);\\n  }\\n  .scale-out {\\n    opacity: 0;\\n    transform: scale(0.5);\\n  }\\n  .container {\\n    overflow: visible;\\n    margin: 0;\\n    padding: 0;\\n    width: 100%;\\n    height: 100%;\\n  }\\n  .fade-in {\\n    opacity: 1;\\n  }\\n  .fade-out {\\n    opacity: 0;\\n  }\\n  .modal-image {\\n    position: absolute;\\n    top: 0;\\n    left: 0;\\n    width: 100%;\\n    height: 100%;\\n    background-color: #000000;\\n    z-index: 0;\\n  }\\n\\n  .close {\\n    color: #fff;\\n    float: right;\\n    font-size: 28px;\\n    font-weight: bold;\\n  }\\n  .close:hover,\\n  .close:focus {\\n    text-decoration: none;\\n    cursor: pointer;\\n  }\\n  .modal-text {\\n    position: absolute;\\n    top: 50%;\\n    left: 50%;\\n    transform: translate(-50%, -50%);\\n    /* background-color: rgba(20, 20, 20, 0.8); */\\n    padding: 20px;\\n    border-radius: 10px;\\n    text-align: Left;\\n    width: 100%;\\n    height: 100%;\\n    color: white;\\n    overflow-y: scroll;\\n    margin: 10px;\\n  }\\n  h1 {\\n    font-size: 3.5em;\\n    margin: 5px;\\n  }\\n  @media (max-width: 600px) {\\n  h1 {\\n    font-size:2.5em;\\n\\n  }\\n  img {\\n    width: 100%;\\n    height: auto;\\n  }\\n}\\n.modal-text::-webkit-scrollbar {\\nwidth: 2px;\\n  border-radius: 80%;\\n}\\n.modal-text::-webkit-scrollbar-track{\\nbackground: #000000;\\n  width:0;\\n  visibility: hidden;\\n}\\n.modal-text::-webkit-scrollbar-thumb {\\nbackground: #ffffff;\\nborder-radius: 2px;\\n}\\n\\n  .content-container {\\n    flex: 1;\\n    padding-right: 20px; /* Adjust spacing between TOC and content */\\n    overflow-y: hidden; /* Allow scrolling if content is too long */\\n  }\\n\\n\\n</style>\\n"],"names":[],"mappings":"AA+MA,6BAAe,CACX,QAAQ,CAAE,KAAK,CACf,GAAG,CAAE,CAAC,CACN,IAAI,CAAE,CAAC,CACP,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,UAAU,CAAE,KAAK,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,GAAG,CAAC,CAC9B,OAAO,CAAE,GACX,CACA,qCAAuB,CACvB,QAAQ,CAAE,QAAQ,CAClB,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,KAAK,CACb,QAAQ,CAAE,MAAM,CAChB,aAAa,CAAE,IACjB,CAEA,2BAAa,CACX,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,UAAU,CAAE,KAAK,CACjB,eAAe,CAAE,MAAM,CACvB,MAAM,CAAE,WAAW,GAAG,CAAC;AACzB,CACE,6BAAe,CACb,OAAO,CAAE,IAAI,CACb,eAAe,CAAE,MACnB,CACA,qBAAO,CACL,OAAO,CAAE,KAAK,CACd,QAAQ,CAAE,KAAK,CACf,OAAO,CAAE,CAAC,CACV,WAAW,CAAE,IAAI,CACjB,IAAI,CAAE,CAAC,CACP,GAAG,CAAE,CAAC,CACN,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,QAAQ,CAAE,MAAM,CAChB,UAAU,CAAE,MAAM,CAClB,gBAAgB,CAAE,KAAK,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,GAAG,CAAC,CACpC,OAAO,CAAE,CAAC,CACV,gBAAgB,CAAE,MAAM,CAAC,MAAM,CAC/B,UAAU,CAAE,OAAO,CAAC,IAAI,CAAC,IAAI,CAAC,CAAC,SAAS,CAAC,IAAI,CAAC,IAAI,CAClD,QAAQ,CAAE,KAAK,CACf,UAAU,CAAE,KAAK,CACjB,OAAO,CAAE,IAAI,CACb,UAAU,CAAE,GAAG,CAAC,IAAI,CAAC,IAEvB,CAmBA,wBAAU,CACR,OAAO,CAAE,CACX,CACA,2BAAa,CACX,QAAQ,CAAE,QAAQ,CAClB,GAAG,CAAE,CAAC,CACN,IAAI,CAAE,CAAC,CACP,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,gBAAgB,CAAE,OAAO,CACzB,OAAO,CAAE,CACX,CAEA,qBAAO,CACL,KAAK,CAAE,IAAI,CACX,KAAK,CAAE,KAAK,CACZ,SAAS,CAAE,IAAI,CACf,WAAW,CAAE,IACf,CACA,qBAAM,MAAM,CACZ,qBAAM,MAAO,CACX,eAAe,CAAE,IAAI,CACrB,MAAM,CAAE,OACV,CACA,0BAAY,CACV,QAAQ,CAAE,QAAQ,CAClB,GAAG,CAAE,GAAG,CACR,IAAI,CAAE,GAAG,CACT,SAAS,CAAE,UAAU,IAAI,CAAC,CAAC,IAAI,CAAC,CAEhC,OAAO,CAAE,IAAI,CACb,aAAa,CAAE,IAAI,CACnB,UAAU,CAAE,IAAI,CAChB,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IAAI,CACZ,KAAK,CAAE,KAAK,CACZ,UAAU,CAAE,MAAM,CAClB,MAAM,CAAE,IACV,CACA,iBAAG,CACD,SAAS,CAAE,KAAK,CAChB,MAAM,CAAE,GACV,CACA,MAAO,YAAY,KAAK,CAAE,CAC1B,iBAAG,CACD,UAAU,KAEZ,CACA,kBAAI,CACF,KAAK,CAAE,IAAI,CACX,MAAM,CAAE,IACV,CACF,CACA,0BAAW,mBAAoB,CAC/B,KAAK,CAAE,GAAG,CACR,aAAa,CAAE,GACjB,CACA,0BAAW,yBAAyB,CACpC,UAAU,CAAE,OAAO,CACjB,MAAM,CAAC,CACP,UAAU,CAAE,MACd,CACA,0BAAW,yBAA0B,CACrC,UAAU,CAAE,OAAO,CACnB,aAAa,CAAE,GACf,CAEE,iCAAmB,CACjB,IAAI,CAAE,CAAC,CACP,aAAa,CAAE,IAAI,CACnB,UAAU,CAAE,MACd"}`
     };
     Modal = create_ssr_component(($$result, $$props, $$bindings, slots) => {
       let $size, $$unsubscribe_size;
@@ -1017,14 +3981,14 @@ var init_page_svelte = __esm({
         <h2> The Design Process</h2>
         <p> Our Design Process consists of 5 stages: </p>
         <ol>
-          <li> Research </li>
-          <li> Design </li>
-          <li> Prototype </li>
-          <li> Test </li>
-          <li> Launch </li>
+          <li> Research - Gather information on similar CANSAT designs and study requirements for temperature, pressure, and altitude measurements. </li>
+          <li> Design - Sketch and plan the satellite\u2019s structure, layout, and materials, focusing on durability, weight, and sensor placement. </li>
+          <li> Prototype - Build an initial model of the CANSAT to test design concepts and ensure all components fit and function as planned. </li>
+          <li> Test - Run ground and flight tests to assess performance, identifying any issues with data collection or deployment mechanisms. </li>
+          <li> Launch - Launch the satellite and collect data </li>
         </ol>
       </section>
-      
+      <p data-type='exit' class='interactable'>Created bt Arjun</p>
 
 <style>
   a {
@@ -1039,37 +4003,65 @@ var init_page_svelte = __esm({
           image: "/d41586-024-02191-1_27293496.jpg"
         },
         modal2: {
-          title: "Sample",
+          title: "Mission Goals",
           content: `
-      <h2>Sample</h2>
-    <p>Sample</p>
+  <section>
+    <h2>The objectives of our CANSAT Mission</h2>
+    <p>Our CANSAT mission focuses on capturing environmental data, focussing
+    on temperature, atmospheric pressure and altitude.</p>
+    <ol>
+     <li>A barometric pressure sensor will record pressure levels as the CANSAT moves through different layers of the atmosphere. Pressure generally decreases with altitude, and by measuring this gradient, we can accurately determine the altitude of the CANSAT. </li>
+     <li>Altitude can be determined by combining data from a barometric pressure sensor, which measures atmospheric pressure changes with height, and a GPS module for precise positional data.</li>
+    </ol>
+  </section>
+  <p data-type='video' class='interactable'>Created by Arjun</p>
+    
       `,
-          image: "/Ad01.jpg"
+          image: "Satellite Building.png"
         },
         modal3: {
-          title: "Sample",
+          title: "Uses of Satellites",
           content: `
-
-     <h2>Sample</h2>
-    <p>Sample</p>
+      <section>
+     <h2>What do humans use satellites for?</h2>
+     <uol>
+       <li>Communication: Satellites enable global connectivity, allowing for phone calls, internet access, and television broadcasts even in remote or rural areas by relaying signals across vast distances.</li>
+       <li>Weather Monitoring and Climate Study: Satellites provide real-time data on weather patterns, storms, and temperature trends, helping meteorologists forecast weather and scientists monitor climate change and environmental conditions over time.</li>
+       <li>Navigation and GPS: Satellites are essential for the Global Positioning System (GPS), guiding navigation for vehicles, aircraft, ships, and personal devices, which is crucial for transportation, logistics, and personal travel.</li>
+     </uol>
+    <p data-type='exit' class='interactable'>Created by Arjun</p>
       `,
-          image: "/HTML.webp"
+          image: "Uses of Satellites.jpg"
         },
         modal4: {
-          title: "Sample",
+          title: "Launch and Deployment",
           content: `
-     <h2>Sample</h2>
-    <p>Sample</p>
+      <section>
+     <h2>How are we going to Launch our Satellite?</h2>
+     <uol>
+      <li>Launch Mechanism: Our CANSAT will be launched via a small rocket or high-altitude balloon, which will carry it to the desired altitude before deployment. This launch method ensures the CANSAT reaches a high enough point to simulate the descent phase of an actual satellite.</li>
+      <li>Deployment Sequence: Once the CANSAT reaches its target altitude, it will be released from the rocket or balloon and begin its descent. During this phase, an automated system will activate sensors and data collection modules, ensuring data is captured from the start of the descent.</li>
+      <li>Parachute Activation: To control its descent speed and ensure a safe landing, the CANSAT will deploy a small parachute at a specific altitude. This controlled descent allows the satellite to collect data at various atmospheric layers, maximizing the quality and quantity of information we gather.</li>
+     </uol>
+    </section>
+    <p data-type='exit' class='interactable'>Created by Arjun</p>
       `,
-          image: "/AiEmer.jpg"
+          image: "Satellite Launch.jpeg"
         },
         modal5: {
-          title: "Sample",
+          title: "Data Analysis",
           content: `
-      <h2>Sample</h2>
-    <p>Sample</p>
+      <section>
+      <h2>What will we do once we have the data?</h2>
+      <uol>
+       <li>Data Processing: After retrieval, we will process the collected data by organizing it into readable formats, such as tables and graphs, to visualize temperature, pressure, and altitude changes during the descent, making patterns easier to analyse.</li>
+       <li>Analysis and Interpretation: Using data analysis techniques, we\u2019ll interpret the trends and compare our findings with expected atmospheric models, assessing any anomalies and understanding how each parameter varies with altitude.</li>
+       <li>Reporting and Improvement: We\u2019ll compile our findings into a comprehensive report, highlighting key insights and any unexpected results, and use these conclusions to refine our engineering design, sensor calibration, and deployment process for future missions.</li>
+      </uol>
+    </section>
+     <p data-type='exit' class='interactable'>Created by Arjun</p>
       `,
-          image: "/amazon.jpeg"
+          image: "Data Analysis.png"
         }
       };
       onDestroy(() => {
@@ -1082,7 +4074,7 @@ var init_page_svelte = __esm({
       if ($$props.dimensions === void 0 && $$bindings.dimensions && dimensions !== void 0) $$bindings.dimensions(dimensions);
       $$result.css.add(css$2);
       $$unsubscribe_size();
-      return `<div class="${["modal-overlay svelte-1h14j69", ""].join(" ").trim()}"></div> <div class="${["modal svelte-1h14j69", ""].join(" ").trim()}"${add_attribute("id", id, 0)} style="${"width: " + escape($size.width, true) + "px; height: " + escape($size.height, true) + "px; top: " + escape($size.top, true) + "px; left: " + escape($size.left, true) + "px;"}"${add_attribute("this", modalElement, 0)}><div class="modal-image svelte-1h14j69"></div> <div class="modal-content svelte-1h14j69"><span class="close svelte-1h14j69" id="closecross" data-svelte-h="svelte-1l7plis">\xD7</span> <div class="modal-text svelte-1h14j69">${modalsData[id].image ? `<div class="cover-image-container svelte-1h14j69"><img${add_attribute("src", modalsData[id].image, 0)}${add_attribute("alt", modalsData[id].title, 0)} class="cover-image svelte-1h14j69"></div>` : ``} <h1 class="svelte-1h14j69">${escape(modalsData[id].title)}</h1> <div class="content-container svelte-1h14j69"><hr> <div class="content"><!-- HTML_TAG_START -->${modalsData[id].content}<!-- HTML_TAG_END --></div></div></div></div> </div>`;
+      return `<div class="${["modal-overlay svelte-1eyv4t2", ""].join(" ").trim()}"></div> <div class="${["modal svelte-1eyv4t2", ""].join(" ").trim()}"${add_attribute("id", id, 0)} style="${"width: " + escape($size.width, true) + "px; height: " + escape($size.height, true) + "px; top: " + escape($size.top, true) + "px; left: " + escape($size.left, true) + "px;"}"${add_attribute("this", modalElement, 0)}><div class="modal-image svelte-1eyv4t2"></div> <div class="modal-content svelte-1eyv4t2"><span class="close interactable svelte-1eyv4t2" id="closecross" data-type="exit" data-svelte-h="svelte-29wtqa">\xD7</span> <div class="modal-text svelte-1eyv4t2">${modalsData[id].image ? `<div class="cover-image-container svelte-1eyv4t2"><img${add_attribute("src", modalsData[id].image, 0)}${add_attribute("alt", modalsData[id].title, 0)} class="cover-image svelte-1eyv4t2"></div>` : ``} <h1 class="svelte-1eyv4t2">${escape(modalsData[id].title)}</h1> <div class="content-container svelte-1eyv4t2"><hr> <div class="content"><!-- HTML_TAG_START -->${modalsData[id].content}<!-- HTML_TAG_END --></div></div></div></div> </div>`;
     });
     css$1 = {
       code: ".instruction-card.svelte-laq1tm.svelte-laq1tm{background:#333;color:white;padding:1rem;border-radius:8px;margin:1rem;text-align:left;flex-shrink:0}.instruction-card.svelte-laq1tm button.svelte-laq1tm{margin-top:1rem;padding:0.5rem 1rem;background:#fff;border:none;color:#333;cursor:pointer;border-radius:4px}.instruction-card.svelte-laq1tm button.svelte-laq1tm:hover{background:#ddd}",
@@ -1093,9 +4085,175 @@ var init_page_svelte = __esm({
       $$result.css.add(css$1);
       return `<div class="instruction-card svelte-laq1tm"><h1 data-svelte-h="svelte-yqkvhw">How to Use the Site</h1> <ul>${``} <li data-svelte-h="svelte-54qq1q"><p>This site uses scrolling to move between cards.</p></li> <li data-svelte-h="svelte-1bbx9lk"><p>To move the cards left or right, use the scroll wheel on your mouse.</p></li> <li data-svelte-h="svelte-1iurnme"><p>To see information about the topic on a card, click on it.</p></li> <li data-svelte-h="svelte-15uymth"><p>At the top of each card, there is a table of contents, click on a section to scroll there.</p></li> <li data-svelte-h="svelte-18sr52j"><p>To close the card press the &#39;x&#39; in the top right corner</p></li> <li data-svelte-h="svelte-xnpchy"><p>If you cannot scroll please make sure Javascript is enabled in your browser</p></li></ul> <p data-svelte-h="svelte-1sq99no">Click the button below to dismiss this message, it will not be shown again.</p> <button class="svelte-laq1tm" data-svelte-h="svelte-zzef9w">Got it!</button> </div>`;
     });
-    css = {
-      code: ".text-overlay.svelte-dxpaz5{overflow:hidden}.darker.svelte-dxpaz5{filter:brightness(0.7)}",
-      map: `{"version":3,"file":"main.svelte","sources":["main.svelte"],"sourcesContent":["<script>\\n  import { onMount, onDestroy } from 'svelte';\\n  import { goto } from '$app/navigation'; // Import goto from SvelteKit\\n  import Modal from './Modal.svelte'; // Import the Modal component\\n  import './styles.css';\\n  import InstructionCard from './InstructionCard.svelte';\\n\\n  let showInstructions = true;\\n  let isModalOpen = false;\\n  let currentModalId;\\n  let modal = null;\\n  let track;\\n  let isMouseDown = false;\\n  let initialMouseX = 0;\\n  let lastKnownPercentage = -10;\\n  let dragSensitivity = 0.01;\\n  let scrollSensitivity = 0.2;\\nlet isMobile = false;\\nlet modalDimensions = null;\\n  const isBrowser = typeof window !== 'undefined';\\n\\n  function dismissInstructions() {\\n    localStorage.setItem('instructionsDismissed', 'true');\\n    showInstructions = false;\\n  }\\n  function openModal(modalId, event) {\\n  const container = event.currentTarget;\\n  const rect = container.getBoundingClientRect();\\n  isModalOpen = true;\\n  currentModalId = modalId;\\n  modalDimensions = {\\n    width: rect.width,\\n    height: rect.height,\\n    top: rect.top,\\n    left: rect.left\\n  };\\n  goto(\`#\${modalId}\`, { replaceState: true });\\n}\\n\\n  function closeModal() {\\n    isModalOpen = false;\\n    currentModalId = null;\\n    goto('/', { replaceState: true });\\n  }\\n\\n  \\n\\n  function handleMouseDown(e) {\\n    if (!isModalOpen) {\\n      isMouseDown = true;\\n      initialMouseX = e.clientX;\\n    }\\n  }\\n\\n  function handleMouseMove(e) {\\n    if (isMouseDown && !isModalOpen && !isMobile) {\\n      const mouseDelta = initialMouseX - e.clientX;\\n      const maxDelta = window.innerWidth / 2;\\n\\n      lastKnownPercentage = Math.max(\\n        Math.min(lastKnownPercentage + (mouseDelta / maxDelta) * -100 * dragSensitivity, -10),\\n        -100\\n      );\\n\\n      updateTransform();\\n    }\\n  }\\n  function handleResize() {\\n    isMobile = window.innerWidth <= 600;\\n    if (isMobile) {\\n        scrollOnLoad(-50);\\n        window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n        window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n        window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n        window.removeEventListener(\\"wheel\\", handleWheel);\\n    } else {\\n      scrollOnLoad(-10);\\n        window.addEventListener(\\"mousedown\\", handleMouseDown);\\n        window.addEventListener(\\"mousemove\\", handleMouseMove);\\n        window.addEventListener(\\"mouseup\\", handleMouseUp);\\n        window.addEventListener(\\"wheel\\", handleWheel, { passive: false });\\n    }\\n}\\n\\n  function handleMouseUp() {\\n    isMouseDown = false;\\n  }\\n\\n  function handleWheel(e) {\\n    if (!isModalOpen && !isMobile) {\\n      const delta = e.deltaY || e.detail || e.wheelDelta;\\n      const scrollAmount = delta * scrollSensitivity;\\n      const maxDelta = window.innerHeight / 2;\\n\\n      lastKnownPercentage = Math.max(\\n        Math.min(lastKnownPercentage + (scrollAmount / maxDelta) * -100, -10),\\n        -100\\n      );\\n\\n      updateTransform();\\n      e.preventDefault();\\n    }\\n  }\\n  function scrollOnLoad(x) {\\n    console.log(x);\\n    track.style.transform = \`translate(\${x}%, -50%)\`;\\n\\nfor (const image of track.getElementsByClassName(\\"image\\")) {\\n  image.style.objectPosition = \`\${100 + -10}% center\`;\\n}\\n  }\\n  function updateTransform() {\\n    track.style.transform = \`translate(\${lastKnownPercentage}%, -50%)\`;\\n\\n    for (const image of track.getElementsByClassName(\\"image\\")) {\\n      image.style.objectPosition = \`\${100 + lastKnownPercentage}% center\`;\\n    }\\n  }\\n\\n  if (isBrowser) {\\n    function handlePopState() {\\n      isModalOpen = false;\\n      currentModalId = null;\\n    }\\n    onMount(() => {\\n      const dismissed = localStorage.getItem('instructionsDismissed');\\n        showInstructions = !dismissed;\\n\\n        track = document.getElementById(\\"image-track\\");\\n        handleResize();\\n\\n        if (isMobile) {\\n            window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n            window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n            window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n            window.removeEventListener(\\"wheel\\", handleWheel);\\n        } else {\\n            window.addEventListener(\\"mousedown\\", handleMouseDown);\\n            window.addEventListener(\\"mousemove\\", handleMouseMove);\\n            window.addEventListener(\\"mouseup\\", handleMouseUp);\\n            window.addEventListener(\\"wheel\\", handleWheel, { passive: false });\\n        }\\n\\n        window.addEventListener('popstate', handlePopState);\\n        window.addEventListener('resize', handleResize);\\n    });\\n\\n    onDestroy(() => {\\n      window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n        window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n        window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n        window.removeEventListener(\\"wheel\\", handleWheel);\\n        window.removeEventListener('popstate', handlePopState);\\n        window.removeEventListener('resize', handleResize);\\n    });\\n  }\\n\\n<\/script>\\n<div id=\\"image-track\\">\\n  {#if showInstructions}\\n\\n      <InstructionCard on:dismiss={dismissInstructions} />\\n    {/if}\\n  <div class=\\"image-container\\" on:click={(event) => openModal('modal1', event)}>\\n    <img class=\\"image\\" src=\\"/d41586-024-02191-1_27293496.jpg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Engineering</div>  <!-- Change title here -->\\n  </div>\\n  <div class=\\"image-container\\" on:click={(event) => openModal('modal2', event)}>\\n    <img class=\\"image\\" src=\\"/Ad01.jpg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Sample</div>\\n  </div>\\n  <div class=\\"image-container \\" on:click={(event) => openModal('modal3', event)}>\\n    <img class=\\"image darker\\" src=\\"/HTML.webp\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Sample</div>\\n  </div>\\n  <div class=\\"image-container\\" on:click={(event) => openModal('modal4', event)}>\\n    <img class=\\"image\\" src=\\"/AiEmer.jpg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Sample</div>\\n  </div>\\n  <div class=\\"image-container\\" on:click={(event) => openModal('modal5', event)}>\\n    <img class=\\"image darker\\" src=\\"/amazon.jpeg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\">Sample</div>\\n  </div>\\n</div>\\n\\n<style>\\n\\n  .text-overlay {\\n    overflow: hidden;\\n  }\\n  .darker {\\n    filter: brightness(0.7);\\n  }\\n\\n  </style>\\n{#if isModalOpen}\\n<Modal id={currentModalId} onClose={closeModal} dimensions={modalDimensions} />\\n{/if}"],"names":[],"mappings":"AA2LE,2BAAc,CACZ,QAAQ,CAAE,MACZ,CACA,qBAAQ,CACN,MAAM,CAAE,WAAW,GAAG,CACxB"}`
+    PRODUCTION2 = false;
+    try {
+      PRODUCTION2 = false;
+    } catch (e3) {
+    }
+    SvgElement = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let { tag } = $$props;
+      let { props } = $$props;
+      let { children } = $$props;
+      let { style = null } = $$props;
+      let { ref = null } = $$props;
+      if (tag !== "svg") {
+        throw new Error('SvgElement requires a tag of "svg"');
+      }
+      function processChildren(children2) {
+        return children2?.reduce(
+          (acc, child) => {
+            return acc + (child.tag ? generateMarkup(child) : child);
+          },
+          ""
+        ) || "";
+      }
+      function generateMarkup({ tag: tag2, props: props2, children: children2 }) {
+        const attributes = Object.keys(props2).map((key2) => `${key2}="${props2[key2]}"`).join(" ");
+        return `<${tag2} ${attributes}>${processChildren(children2)}</${tag2}>`;
+      }
+      const markup = processChildren(children);
+      const elementStyle = props?.style ? `${props.style}${style || ""}` : style;
+      const elementProps = { ...props, style: elementStyle };
+      if ($$props.tag === void 0 && $$bindings.tag && tag !== void 0) $$bindings.tag(tag);
+      if ($$props.props === void 0 && $$bindings.props && props !== void 0) $$bindings.props(props);
+      if ($$props.children === void 0 && $$bindings.children && children !== void 0) $$bindings.children(children);
+      if ($$props.style === void 0 && $$bindings.style && style !== void 0) $$bindings.style(style);
+      if ($$props.ref === void 0 && $$bindings.ref && ref !== void 0) $$bindings.ref(ref);
+      return `<svg${spread([escape_object(elementProps)], {})}${add_attribute("this", ref, 0)}><!-- HTML_TAG_START -->${markup}<!-- HTML_TAG_END --></svg>`;
+    });
+    FontAwesomeIcon = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let $$restProps = compute_rest_props($$props, [
+        "border",
+        "mask",
+        "maskId",
+        "fixedWidth",
+        "inverse",
+        "flip",
+        "icon",
+        "listItem",
+        "pull",
+        "pulse",
+        "rotation",
+        "size",
+        "spin",
+        "spinPulse",
+        "spinReverse",
+        "beat",
+        "fade",
+        "beatFade",
+        "bounce",
+        "shake",
+        "symbol",
+        "title",
+        "titleId",
+        "transform",
+        "swapOpacity",
+        "ref",
+        "style"
+      ]);
+      let { border = false } = $$props;
+      let { mask = null } = $$props;
+      let { maskId = null } = $$props;
+      let { fixedWidth = false } = $$props;
+      let { inverse = false } = $$props;
+      let { flip = false } = $$props;
+      let { icon: icon$1 = null } = $$props;
+      let { listItem = false } = $$props;
+      let { pull = null } = $$props;
+      let { pulse = false } = $$props;
+      let { rotation = null } = $$props;
+      let { size = null } = $$props;
+      let { spin = false } = $$props;
+      let { spinPulse = false } = $$props;
+      let { spinReverse = false } = $$props;
+      let { beat = false } = $$props;
+      let { fade = false } = $$props;
+      let { beatFade = false } = $$props;
+      let { bounce = false } = $$props;
+      let { shake = false } = $$props;
+      let { symbol = false } = $$props;
+      let { title = "" } = $$props;
+      let { titleId = null } = $$props;
+      let { transform = null } = $$props;
+      let { swapOpacity = false } = $$props;
+      let { ref = null } = $$props;
+      let { style = null } = $$props;
+      const iconLookup = normalizeIconArgs(icon$1);
+      const classes = objectWithKey("classes", [...classList($$props), ...($$props.class || "").split(" ")]);
+      const transformObj = objectWithKey("transform", typeof transform === "string" ? parse$1.transform(transform) : transform);
+      const maskObj = objectWithKey("mask", normalizeIconArgs(mask));
+      const renderedIcon = icon(iconLookup, {
+        ...classes,
+        ...transformObj,
+        ...maskObj,
+        symbol,
+        title,
+        titleId,
+        maskId
+      });
+      let result = null;
+      if (!renderedIcon) {
+        log("Could not find icon", iconLookup);
+      } else {
+        const { abstract } = renderedIcon;
+        result = convert(
+          (tag, props, children) => {
+            return { tag, props, children };
+          },
+          abstract[0],
+          $$restProps
+        );
+      }
+      if ($$props.border === void 0 && $$bindings.border && border !== void 0) $$bindings.border(border);
+      if ($$props.mask === void 0 && $$bindings.mask && mask !== void 0) $$bindings.mask(mask);
+      if ($$props.maskId === void 0 && $$bindings.maskId && maskId !== void 0) $$bindings.maskId(maskId);
+      if ($$props.fixedWidth === void 0 && $$bindings.fixedWidth && fixedWidth !== void 0) $$bindings.fixedWidth(fixedWidth);
+      if ($$props.inverse === void 0 && $$bindings.inverse && inverse !== void 0) $$bindings.inverse(inverse);
+      if ($$props.flip === void 0 && $$bindings.flip && flip !== void 0) $$bindings.flip(flip);
+      if ($$props.icon === void 0 && $$bindings.icon && icon$1 !== void 0) $$bindings.icon(icon$1);
+      if ($$props.listItem === void 0 && $$bindings.listItem && listItem !== void 0) $$bindings.listItem(listItem);
+      if ($$props.pull === void 0 && $$bindings.pull && pull !== void 0) $$bindings.pull(pull);
+      if ($$props.pulse === void 0 && $$bindings.pulse && pulse !== void 0) $$bindings.pulse(pulse);
+      if ($$props.rotation === void 0 && $$bindings.rotation && rotation !== void 0) $$bindings.rotation(rotation);
+      if ($$props.size === void 0 && $$bindings.size && size !== void 0) $$bindings.size(size);
+      if ($$props.spin === void 0 && $$bindings.spin && spin !== void 0) $$bindings.spin(spin);
+      if ($$props.spinPulse === void 0 && $$bindings.spinPulse && spinPulse !== void 0) $$bindings.spinPulse(spinPulse);
+      if ($$props.spinReverse === void 0 && $$bindings.spinReverse && spinReverse !== void 0) $$bindings.spinReverse(spinReverse);
+      if ($$props.beat === void 0 && $$bindings.beat && beat !== void 0) $$bindings.beat(beat);
+      if ($$props.fade === void 0 && $$bindings.fade && fade !== void 0) $$bindings.fade(fade);
+      if ($$props.beatFade === void 0 && $$bindings.beatFade && beatFade !== void 0) $$bindings.beatFade(beatFade);
+      if ($$props.bounce === void 0 && $$bindings.bounce && bounce !== void 0) $$bindings.bounce(bounce);
+      if ($$props.shake === void 0 && $$bindings.shake && shake !== void 0) $$bindings.shake(shake);
+      if ($$props.symbol === void 0 && $$bindings.symbol && symbol !== void 0) $$bindings.symbol(symbol);
+      if ($$props.title === void 0 && $$bindings.title && title !== void 0) $$bindings.title(title);
+      if ($$props.titleId === void 0 && $$bindings.titleId && titleId !== void 0) $$bindings.titleId(titleId);
+      if ($$props.transform === void 0 && $$bindings.transform && transform !== void 0) $$bindings.transform(transform);
+      if ($$props.swapOpacity === void 0 && $$bindings.swapOpacity && swapOpacity !== void 0) $$bindings.swapOpacity(swapOpacity);
+      if ($$props.ref === void 0 && $$bindings.ref && ref !== void 0) $$bindings.ref(ref);
+      if ($$props.style === void 0 && $$bindings.style && style !== void 0) $$bindings.style(style);
+      let $$settled;
+      let $$rendered;
+      let previous_head = $$result.head;
+      do {
+        $$settled = true;
+        $$result.head = previous_head;
+        $$rendered = `${result ? `${validate_component(SvgElement, "SvgElement").$$render(
+          $$result,
+          Object.assign({}, result, { style }, { ref }),
+          {
+            ref: ($$value) => {
+              ref = $$value;
+              $$settled = false;
+            }
+          },
+          {}
+        )}` : ``}`;
+      } while (!$$settled);
+      return $$rendered;
+    });
+    css2 = {
+      code: ".image-container.svelte-1sbr6ag{position:relative}",
+      map: `{"version":3,"file":"main.svelte","sources":["main.svelte"],"sourcesContent":["<script>\\n  import { onMount, onDestroy } from 'svelte';\\n  import { goto } from '$app/navigation';\\n  import Modal from './Modal.svelte';\\n  import './styles.css';\\n  import './cursor.css';\\n  import InstructionCard from './InstructionCard.svelte';\\n  import { faPlay, faArrowUpRightFromSquare, faRightToBracket } from '@fortawesome/free-solid-svg-icons';\\n  import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';\\n  \\n  let showInstructions = true;\\n  let isModalOpen = false;\\n  let currentModalId;\\n  let track;\\n  let isMouseDown = false;\\n  let initialMouseX = 0;\\n  let lastKnownPercentage = -10;\\n  let dragSensitivity = 0.01;\\n  let scrollSensitivity = 0.2;\\n  let isMobile = false;\\n  let modalDimensions = null;\\n  const isBrowser = typeof window !== 'undefined';\\n  let isLoading = true; // Add loading state variable\\n  let progress = 0; // Add progress state variable\\n  let showLoadingScreen = true; // Add variable to control loading screen visibility\\n  \\n  // Initialize trailerIcon as null\\n  let trailerIcon = null;\\n\\n  function dismissInstructions() {\\n    localStorage.setItem('instructionsDismissed', 'true');\\n    showInstructions = false;\\n  }\\n  \\n  function openModal(modalId, event) {\\n    const container = event.currentTarget;\\n    const rect = container.getBoundingClientRect();\\n    isModalOpen = true;\\n    currentModalId = modalId;\\n    modalDimensions = {\\n      width: rect.width,\\n      height: rect.height,\\n      top: rect.top,\\n      left: rect.left\\n    };\\n    goto(\`#\${modalId}\`, { replaceState: true });\\n  }\\n\\n  function closeModal() {\\n    isModalOpen = false;\\n    currentModalId = null;\\n    goto('/', { replaceState: true });\\n  }\\n\\n  function handleMouseDown(e) {\\n    if (!isModalOpen) {\\n      isMouseDown = true;\\n      initialMouseX = e.clientX;\\n    }\\n  }\\n\\n  function handleMouseMove(e) {\\n    if (isMouseDown && !isModalOpen && !isMobile) {\\n      const mouseDelta = initialMouseX - e.clientX;\\n      const maxDelta = window.innerWidth / 2;\\n\\n      lastKnownPercentage = Math.max(\\n        Math.min(lastKnownPercentage + (mouseDelta / maxDelta) * -100 * dragSensitivity, -10),\\n        -100\\n      );\\n\\n      updateTransform();\\n    }\\n  }\\n  \\n  function handleResize() {\\n    isMobile = window.innerWidth <= 600;\\n    if (isMobile) {\\n      scrollOnLoad(-50);\\n      window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n      window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n      window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n      window.removeEventListener(\\"wheel\\", handleWheel);\\n    } else {\\n      scrollOnLoad(-10);\\n      window.addEventListener(\\"mousedown\\", handleMouseDown);\\n      window.addEventListener(\\"mousemove\\", handleMouseMove);\\n      window.addEventListener(\\"mouseup\\", handleMouseUp);\\n      window.addEventListener(\\"wheel\\", handleWheel, { passive: false });\\n    }\\n  }\\n\\n  function handleMouseUp() {\\n    isMouseDown = false;\\n  }\\n\\n  function handleWheel(e) {\\n    if (!isModalOpen && !isMobile) {\\n      const delta = e.deltaY || e.detail || e.wheelDelta;\\n      const scrollAmount = delta * scrollSensitivity;\\n      const maxDelta = window.innerHeight / 2;\\n\\n      lastKnownPercentage = Math.max(\\n        Math.min(lastKnownPercentage + (scrollAmount / maxDelta) * -100, -10),\\n        -100\\n      );\\n\\n      updateTransform();\\n      e.preventDefault();\\n    }\\n  }\\n  \\n  function scrollOnLoad(x) {\\n    console.log(x);\\n    track.style.transform = \`translate(\${x}%, -50%)\`;\\n\\n    for (const image of track.getElementsByClassName(\\"image\\")) {\\n      image.style.objectPosition = \`\${100 + -10}% center\`;\\n    }\\n  }\\n  \\n  function updateTransform() {\\n    track.style.transform = \`translate(\${lastKnownPercentage}%, -50%)\`;\\n\\n    for (const image of track.getElementsByClassName(\\"image\\")) {\\n      image.style.objectPosition = \`\${100 + lastKnownPercentage}% center\`;\\n    }\\n  }\\n\\n  // Cursor-related functions and variables\\n  let trailer;\\n\\n  function animateTrailer(e, interacting) {\\n    const x = e.clientX - trailer.offsetWidth / 2;\\n    const y = e.clientY - trailer.offsetHeight / 2;\\n\\n    trailer.style.transform = \`translate(\${x}px, \${y}px)\`;\\n  }\\n\\n  const getTrailerIcon = (type) => {\\n    switch (type) {\\n      case \\"link\\":\\n        return faArrowUpRightFromSquare;\\n      case \\"video\\":\\n        return faPlay;\\n      case \\"exit\\":\\n        return faRightToBracket;\\n      default:\\n        return null; // No icon for other types\\n    }\\n  };\\n\\n  const moveCursor = (e) => {\\n    const interactable = e.target.closest(\\".interactable\\");\\n    const interacting = interactable !== null;\\n\\n    animateTrailer(e, interacting);\\n\\n    if (interacting && interactable.dataset.type === \\"link\\") {\\n      trailerIcon = getTrailerIcon(interactable.dataset.type);\\n      trailer.dataset.type = \\"link\\";\\n    } else if (interacting && interactable.dataset.type === \\"video\\") {\\n      trailerIcon = getTrailerIcon(interactable.dataset.type);\\n      trailer.dataset.type = \\"video\\";\\n    } else if (interacting && interactable.dataset.type === \\"exit\\") {\\n      trailerIcon = getTrailerIcon(interactable.dataset.type);\\n      trailer.dataset.type = \\"exit\\";\\n    }\\n    else {\\n      trailerIcon = null;\\n      trailer.dataset.type = \\"\\";\\n    }\\n  };\\n\\n  if (isBrowser) {\\n    function handlePopState() {\\n      isModalOpen = false;\\n      currentModalId = null;\\n    }\\n    onMount(() => {\\n      const dismissed = localStorage.getItem('instructionsDismissed');\\n      showInstructions = !dismissed;\\n\\n      track = document.getElementById(\\"image-track\\");\\n      handleResize();\\n\\n      if (isMobile) {\\n        window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n        window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n        window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n        window.removeEventListener(\\"wheel\\", handleWheel);\\n      } else {\\n        window.addEventListener(\\"mousedown\\", handleMouseDown);\\n        window.addEventListener(\\"mousemove\\", handleMouseMove);\\n        window.addEventListener(\\"mouseup\\", handleMouseUp);\\n        window.addEventListener(\\"wheel\\", handleWheel, { passive: false });\\n      }\\n\\n      window.addEventListener('popstate', handlePopState);\\n      window.addEventListener('resize', handleResize);\\n\\n      trailer = document.getElementById(\\"trailer\\");\\n\\n      window.addEventListener('mousemove', moveCursor);\\n\\n      // Simulate progress\\n      const interval = setInterval(() => {\\n        progress += 10;\\n        if (progress >= 100) {\\n          clearInterval(interval);\\n          setTimeout(() => {\\n            isLoading = false;\\n          }, 500); // Ensure loading screen shows for at least 500ms\\n        }\\n      }, 50);\\n    });\\n\\n    onDestroy(() => {\\n      window.removeEventListener(\\"mousedown\\", handleMouseDown);\\n      window.removeEventListener(\\"mousemove\\", handleMouseMove);\\n      window.removeEventListener(\\"mouseup\\", handleMouseUp);\\n      window.removeEventListener(\\"wheel\\", handleWheel);\\n      window.removeEventListener('popstate', handlePopState);\\n      window.removeEventListener('resize', handleResize);\\n      window.removeEventListener('mousemove', moveCursor);\\n    });\\n  }\\n  \\n  $: if (!isLoading) {\\n    document.getElementById('loading-screen').classList.add('fade-out');\\n  }\\n\\n  function handleTransitionEnd() {\\n    showLoadingScreen = false;\\n  }\\n<\/script>\\n{#if showLoadingScreen}\\n  <div id=\\"loading-screen\\" class:isLoading={isLoading} on:transitionend={handleTransitionEnd}>\\n    Loading...\\n    <div id=\\"progress-bar\\" style=\\"width: {progress}%;\\"></div>\\n  </div>\\n{/if}\\n\\n<div id=\\"image-track\\" class:isLoading={!isLoading}>\\n  {#if showInstructions}\\n    <InstructionCard on:dismiss={dismissInstructions} />\\n  {/if}\\n  \\n  <!-- Example Interactable Elements -->\\n  <div class=\\"image-container interactable\\" data-type=\\"link\\" on:click={(event) => openModal('modal1', event)}>\\n    <img class=\\"image\\" src=\\"/d41586-024-02191-1_27293496.jpg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\"><span>Engineering</span></div>\\n  </div>\\n  \\n  <div class=\\"image-container interactable\\" data-type=\\"link\\" on:click={(event) => openModal('modal2', event)}>\\n    <img class=\\"image\\" src=\\"Satellite Building.png\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\"><span>Mission Goals</span></div>\\n  </div>\\n  \\n  <div class=\\"image-container interactable\\" data-type=\\"link\\" on:click={(event) => openModal('modal3', event)}>\\n    <img class=\\"image\\" src=\\"Uses of Satellites.jpg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\"><span>Uses of Satellites</span></div>\\n  </div>\\n  \\n  <div class=\\"image-container interactable\\" data-type=\\"link\\" on:click={(event) => openModal('modal4', event)}>\\n    <img class=\\"image\\" src=\\"Satellite Launch.jpeg\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\"><span>Launch and<br>Deployment</span></div>\\n  </div>\\n  \\n  <div class=\\"image-container interactable\\" data-type=\\"link\\" on:click={(event) => openModal('modal5', event)}>\\n    <img class=\\"image darker\\" src=\\"Data Analysis.png\\" draggable=\\"false\\" data-active />\\n    <div class=\\"text-overlay\\"><span>Data Analysis</span></div>\\n  </div>\\n</div>\\n\\n<div id=\\"trailer\\" data-type=\\"\\">\\n  {#if trailerIcon}\\n    <FontAwesomeIcon id=\\"trailer-icon\\" icon={trailerIcon} />\\n  {/if}\\n</div>\\n\\n<style>\\n  /* main.svelte styles */\\n\\n  .image-container {\\n    position: relative;\\n  }\\n\\n  \\n</style>\\n\\n{#if isModalOpen}\\n  <Modal id={currentModalId} onClose={closeModal} dimensions={modalDimensions} />\\n{/if}"],"names":[],"mappings":"AA4RE,+BAAiB,CACf,QAAQ,CAAE,QACZ"}`
     };
     dragSensitivity = 0.01;
     scrollSensitivity = 0.2;
@@ -1109,6 +4267,8 @@ var init_page_svelte = __esm({
       let isMobile = false;
       let modalDimensions = null;
       const isBrowser = typeof window !== "undefined";
+      let progress = 0;
+      let trailerIcon = null;
       function closeModal() {
         isModalOpen = false;
         currentModalId = null;
@@ -1170,6 +4330,42 @@ var init_page_svelte = __esm({
           image.style.objectPosition = `${100 + lastKnownPercentage}% center`;
         }
       }
+      let trailer;
+      function animateTrailer(e3, interacting) {
+        const x = e3.clientX - trailer.offsetWidth / 2;
+        const y2 = e3.clientY - trailer.offsetHeight / 2;
+        trailer.style.transform = `translate(${x}px, ${y2}px)`;
+      }
+      const getTrailerIcon = (type) => {
+        switch (type) {
+          case "link":
+            return faArrowUpRightFromSquare;
+          case "video":
+            return faPlay;
+          case "exit":
+            return faRightToBracket;
+          default:
+            return null;
+        }
+      };
+      const moveCursor = (e3) => {
+        const interactable = e3.target.closest(".interactable");
+        const interacting = interactable !== null;
+        animateTrailer(e3);
+        if (interacting && interactable.dataset.type === "link") {
+          trailerIcon = getTrailerIcon(interactable.dataset.type);
+          trailer.dataset.type = "link";
+        } else if (interacting && interactable.dataset.type === "video") {
+          trailerIcon = getTrailerIcon(interactable.dataset.type);
+          trailer.dataset.type = "video";
+        } else if (interacting && interactable.dataset.type === "exit") {
+          trailerIcon = getTrailerIcon(interactable.dataset.type);
+          trailer.dataset.type = "exit";
+        } else {
+          trailerIcon = null;
+          trailer.dataset.type = "";
+        }
+      };
       if (isBrowser) {
         let handlePopState = function() {
           isModalOpen = false;
@@ -1182,10 +4378,12 @@ var init_page_svelte = __esm({
           window.removeEventListener("wheel", handleWheel);
           window.removeEventListener("popstate", handlePopState);
           window.removeEventListener("resize", handleResize);
+          window.removeEventListener("mousemove", moveCursor);
         });
       }
-      $$result.css.add(css);
-      return `<div id="image-track">${`${validate_component(InstructionCard, "InstructionCard").$$render($$result, {}, {}, {})}`} <div class="image-container" data-svelte-h="svelte-1c5c0h9"><img class="image" src="/d41586-024-02191-1_27293496.jpg" draggable="false" data-active> <div class="text-overlay svelte-dxpaz5">Engineering</div> </div> <div class="image-container" data-svelte-h="svelte-jja9b2"><img class="image" src="/Ad01.jpg" draggable="false" data-active> <div class="text-overlay svelte-dxpaz5">Sample</div></div> <div class="image-container " data-svelte-h="svelte-uckj1s"><img class="image darker svelte-dxpaz5" src="/HTML.webp" draggable="false" data-active> <div class="text-overlay svelte-dxpaz5">Sample</div></div> <div class="image-container" data-svelte-h="svelte-i0rqzl"><img class="image" src="/AiEmer.jpg" draggable="false" data-active> <div class="text-overlay svelte-dxpaz5">Sample</div></div> <div class="image-container" data-svelte-h="svelte-rduii7"><img class="image darker svelte-dxpaz5" src="/amazon.jpeg" draggable="false" data-active> <div class="text-overlay svelte-dxpaz5">Sample</div></div></div>  ${isModalOpen ? `${validate_component(Modal, "Modal").$$render(
+      $$result.css.add(css2);
+      return `${`<div id="loading-screen"${add_classes("isLoading".trim())}>Loading...
+    <div id="progress-bar" style="${"width: " + escape(progress, true) + "%;"}"></div></div>`} <div id="image-track"${add_classes("".trim())}>${`${validate_component(InstructionCard, "InstructionCard").$$render($$result, {}, {}, {})}`}  <div class="image-container interactable svelte-1sbr6ag" data-type="link" data-svelte-h="svelte-4m8sfn"><img class="image" src="/d41586-024-02191-1_27293496.jpg" draggable="false" data-active> <div class="text-overlay"><span>Engineering</span></div></div> <div class="image-container interactable svelte-1sbr6ag" data-type="link" data-svelte-h="svelte-wfbda5"><img class="image" src="Satellite Building.png" draggable="false" data-active> <div class="text-overlay"><span>Mission Goals</span></div></div> <div class="image-container interactable svelte-1sbr6ag" data-type="link" data-svelte-h="svelte-cwqpy9"><img class="image" src="Uses of Satellites.jpg" draggable="false" data-active> <div class="text-overlay"><span>Uses of Satellites</span></div></div> <div class="image-container interactable svelte-1sbr6ag" data-type="link" data-svelte-h="svelte-15rzy6k"><img class="image" src="Satellite Launch.jpeg" draggable="false" data-active> <div class="text-overlay"><span>Launch and<br>Deployment</span></div></div> <div class="image-container interactable svelte-1sbr6ag" data-type="link" data-svelte-h="svelte-hhrgci"><img class="image darker" src="Data Analysis.png" draggable="false" data-active> <div class="text-overlay"><span>Data Analysis</span></div></div></div> <div id="trailer" data-type="">${trailerIcon ? `${validate_component(FontAwesomeIcon, "FontAwesomeIcon").$$render($$result, { id: "trailer-icon", icon: trailerIcon }, {}, {})}` : ``}</div>  ${isModalOpen ? `${validate_component(Modal, "Modal").$$render(
         $$result,
         {
           id: currentModalId,
@@ -1216,8 +4414,8 @@ var init__3 = __esm({
   ".svelte-kit/output/server/nodes/2.js"() {
     index3 = 2;
     component3 = async () => component_cache3 ??= (await Promise.resolve().then(() => (init_page_svelte(), page_svelte_exports))).default;
-    imports3 = ["_app/immutable/nodes/2.HC41LJi3.js", "_app/immutable/chunks/scheduler.DTurKcvQ.js", "_app/immutable/chunks/index.CvJRIlCB.js", "_app/immutable/chunks/entry.Xyt3Gdu4.js"];
-    stylesheets3 = ["_app/immutable/assets/2.Cju36GS4.css"];
+    imports3 = ["_app/immutable/nodes/2.Blnk7ZXa.js", "_app/immutable/chunks/scheduler.DvBSSsau.js", "_app/immutable/chunks/index.DFh_30bs.js", "_app/immutable/chunks/entry.ynT9Tddq.js"];
+    stylesheets3 = ["_app/immutable/assets/2.Dioi1u4B.css"];
     fonts3 = [];
   }
 });
@@ -1404,7 +4602,7 @@ var options = {
 		<div class="error">
 			<span class="status">` + status + '</span>\n			<div class="message">\n				<h1>' + message + "</h1>\n			</div>\n		</div>\n	</body>\n</html>\n"
   },
-  version_hash: "1aem7eb"
+  version_hash: "193xewg"
 };
 async function get_hooks() {
   return {};
@@ -1589,7 +4787,7 @@ function uneval(value, replacer) {
   }
   walk(value);
   const names = /* @__PURE__ */ new Map();
-  Array.from(counts).filter((entry) => entry[1] > 1).sort((a, b) => b[1] - a[1]).forEach((entry, i) => {
+  Array.from(counts).filter((entry) => entry[1] > 1).sort((a2, b) => b[1] - a2[1]).forEach((entry, i) => {
     names.set(entry[0], get_name(i));
   });
   function stringify2(thing) {
@@ -1727,8 +4925,8 @@ function get_name(num) {
   } while (num >= 0);
   return reserved.test(name) ? `${name}0` : name;
 }
-function escape_unsafe_char(c2) {
-  return escaped[c2] || c2;
+function escape_unsafe_char(c3) {
+  return escaped[c3] || c3;
 }
 function escape_unsafe_chars(str) {
   return str.replace(unsafe_chars, escape_unsafe_char);
@@ -1968,17 +5166,17 @@ function negotiate(accept, types) {
       parts.push({ type, subtype, q: +q, i });
     }
   });
-  parts.sort((a, b) => {
-    if (a.q !== b.q) {
-      return b.q - a.q;
+  parts.sort((a2, b) => {
+    if (a2.q !== b.q) {
+      return b.q - a2.q;
     }
-    if (a.subtype === "*" !== (b.subtype === "*")) {
-      return a.subtype === "*" ? 1 : -1;
+    if (a2.subtype === "*" !== (b.subtype === "*")) {
+      return a2.subtype === "*" ? 1 : -1;
     }
-    if (a.type === "*" !== (b.type === "*")) {
-      return a.type === "*" ? 1 : -1;
+    if (a2.type === "*" !== (b.type === "*")) {
+      return a2.type === "*" ? 1 : -1;
     }
-    return a.i - b.i;
+    return a2.i - b.i;
   });
   let accepted;
   let min_priority = Infinity;
@@ -2041,10 +5239,10 @@ var SvelteKitError = class extends Error {
    * @param {string} text
    * @param {string} message
    */
-  constructor(status, text2, message) {
+  constructor(status, text22, message) {
     super(message);
     this.status = status;
-    this.text = text2;
+    this.text = text22;
   }
 };
 var ActionFailure = class {
@@ -2643,7 +5841,7 @@ function create_universal_fetch(event, state, fetched, csr, resolve_opts) {
             return buffer;
           };
         }
-        async function text2() {
+        async function text22() {
           const body2 = await response2.text();
           if (!body2 || typeof body2 === "string") {
             await push_fetched(body2, false);
@@ -2654,11 +5852,11 @@ function create_universal_fetch(event, state, fetched, csr, resolve_opts) {
           return body2;
         }
         if (key2 === "text") {
-          return text2;
+          return text22;
         }
         if (key2 === "json") {
           return async () => {
-            return JSON.parse(await text2());
+            return JSON.parse(await text22());
           };
         }
         return Reflect.get(response2, key2, response2);
@@ -2798,7 +5996,7 @@ function sha256(data) {
   for (let i = 0; i < array2.length; i += 16) {
     const w = array2.subarray(i, i + 16);
     let tmp;
-    let a;
+    let a2;
     let b;
     let out0 = out[0];
     let out1 = out[1];
@@ -2812,9 +6010,9 @@ function sha256(data) {
       if (i2 < 16) {
         tmp = w[i2];
       } else {
-        a = w[i2 + 1 & 15];
+        a2 = w[i2 + 1 & 15];
         b = w[i2 + 14 & 15];
-        tmp = w[i2 & 15] = (a >>> 7 ^ a >>> 18 ^ a >>> 3 ^ a << 25 ^ a << 14) + (b >>> 17 ^ b >>> 19 ^ b >>> 10 ^ b << 15 ^ b << 13) + w[i2 & 15] + w[i2 + 9 & 15] | 0;
+        tmp = w[i2 & 15] = (a2 >>> 7 ^ a2 >>> 18 ^ a2 >>> 3 ^ a2 << 25 ^ a2 << 14) + (b >>> 17 ^ b >>> 19 ^ b >>> 10 ^ b << 15 ^ b << 13) + w[i2 & 15] + w[i2 + 9 & 15] | 0;
       }
       tmp = tmp + out7 + (out4 >>> 6 ^ out4 >>> 11 ^ out4 >>> 25 ^ out4 << 26 ^ out4 << 21 ^ out4 << 7) + (out6 ^ out4 & (out5 ^ out6)) + key[i2];
       out7 = out6;
@@ -2865,14 +6063,14 @@ function precompute() {
 }
 function reverse_endianness(bytes) {
   for (let i = 0; i < bytes.length; i += 4) {
-    const a = bytes[i + 0];
+    const a2 = bytes[i + 0];
     const b = bytes[i + 1];
-    const c2 = bytes[i + 2];
+    const c3 = bytes[i + 2];
     const d = bytes[i + 3];
     bytes[i + 0] = d;
-    bytes[i + 1] = c2;
+    bytes[i + 1] = c3;
     bytes[i + 2] = b;
-    bytes[i + 3] = a;
+    bytes[i + 3] = a2;
   }
 }
 function encode(str) {
@@ -3695,7 +6893,7 @@ async function render_data(event, route, options2, manifest2, state, invalidated
     const url = new URL(event.url);
     url.pathname = normalize_path(url.pathname, trailing_slash);
     const new_event = { ...event, url };
-    const functions = node_ids.map((n2, i) => {
+    const functions2 = node_ids.map((n2, i) => {
       return once(async () => {
         try {
           if (aborted) {
@@ -3716,7 +6914,7 @@ async function render_data(event, route, options2, manifest2, state, invalidated
               for (let j = 0; j < i; j += 1) {
                 const parent = (
                   /** @type {import('types').ServerDataNode | null} */
-                  await functions[j]()
+                  await functions2[j]()
                 );
                 if (parent) {
                   Object.assign(data2, parent.data);
@@ -3731,7 +6929,7 @@ async function render_data(event, route, options2, manifest2, state, invalidated
         }
       });
     });
-    const promises = functions.map(async (fn, i) => {
+    const promises = functions2.map(async (fn, i) => {
       if (!invalidated[i]) {
         return (
           /** @type {import('types').ServerDataSkippedNode} */
@@ -4178,9 +7376,9 @@ function get_cookies(request, url, trailing_slash) {
      * @param {import('cookie').CookieParseOptions} opts
      */
     get(name, opts) {
-      const c2 = new_cookies[name];
-      if (c2 && domain_matches(url.hostname, c2.options.domain) && path_matches(url.pathname, c2.options.path)) {
-        return c2.value;
+      const c3 = new_cookies[name];
+      if (c3 && domain_matches(url.hostname, c3.options.domain) && path_matches(url.pathname, c3.options.path)) {
+        return c3.value;
       }
       const decoder = opts?.decode || decodeURIComponent;
       const req_cookies = (0, import_cookie.parse)(header, { decode: decoder });
@@ -4193,9 +7391,9 @@ function get_cookies(request, url, trailing_slash) {
     getAll(opts) {
       const decoder = opts?.decode || decodeURIComponent;
       const cookies2 = (0, import_cookie.parse)(header, { decode: decoder });
-      for (const c2 of Object.values(new_cookies)) {
-        if (domain_matches(url.hostname, c2.options.domain) && path_matches(url.pathname, c2.options.path)) {
-          cookies2[c2.name] = c2.value;
+      for (const c3 of Object.values(new_cookies)) {
+        if (domain_matches(url.hostname, c3.options.domain) && path_matches(url.pathname, c3.options.path)) {
+          cookies2[c3.name] = c3.value;
         }
       }
       return Object.entries(cookies2).map(([name, value]) => ({ name, value }));
@@ -4565,22 +7763,22 @@ async function respond(request, options2, manifest2, state) {
         }
       }
       if (state.before_handle || state.emulator?.platform) {
-        let config = {};
+        let config2 = {};
         let prerender = false;
         if (route.endpoint) {
           const node = await route.endpoint();
-          config = node.config ?? config;
+          config2 = node.config ?? config2;
           prerender = node.prerender ?? prerender;
         } else if (route.page) {
           const nodes = await load_page_nodes(route.page, manifest2);
-          config = get_page_config(nodes) ?? config;
+          config2 = get_page_config(nodes) ?? config2;
           prerender = get_option(nodes, "prerender") ?? false;
         }
         if (state.before_handle) {
-          state.before_handle(event, config, prerender);
+          state.before_handle(event, config2, prerender);
         }
         if (state.emulator?.platform) {
-          event.platform = await state.emulator.platform({ config, prerender });
+          event.platform = await state.emulator.platform({ config: config2, prerender });
         }
       }
     } else if (state.emulator?.platform) {
@@ -4832,12 +8030,12 @@ var Server = class {
    * }} opts
    */
   async init({ env, read }) {
-    const prefixes = {
+    const prefixes2 = {
       public_prefix: this.#options.env_public_prefix,
       private_prefix: this.#options.env_private_prefix
     };
-    const private_env = filter_private_env(env, prefixes);
-    const public_env2 = filter_public_env(env, prefixes);
+    const private_env = filter_private_env(env, prefixes2);
+    const public_env2 = filter_public_env(env, prefixes2);
     set_private_env(
       prerendering ? new Proxy({ type: "private" }, prerender_env_handler) : private_env
     );
@@ -4887,10 +8085,10 @@ var manifest = (() => {
   return {
     appDir: "_app",
     appPath: "_app",
-    assets: /* @__PURE__ */ new Set(["Ad01.jpg", "AiEmer.jpg", "HTML.webp", "Primechat.jpg", "amazon.jpeg", "amazon.jpg", "d41586-024-02191-1_27293496.jpg", "favicon.png"]),
-    mimeTypes: { ".jpg": "image/jpeg", ".webp": "image/webp", ".jpeg": "image/jpeg", ".png": "image/png" },
+    assets: /* @__PURE__ */ new Set(["Ad01.jpg", "AiEmer.jpg", "Data Analysis.png", "HTML.webp", "Primechat.jpg", "Satellite Building.png", "Satellite Launch.jpeg", "Uses of Satellites.jpg", "amazon.jpeg", "amazon.jpg", "d41586-024-02191-1_27293496.jpg", "favicon.png"]),
+    mimeTypes: { ".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".jpeg": "image/jpeg" },
     _: {
-      client: { "start": "_app/immutable/entry/start.DwZE-IK4.js", "app": "_app/immutable/entry/app.CGlvN2py.js", "imports": ["_app/immutable/entry/start.DwZE-IK4.js", "_app/immutable/chunks/entry.Xyt3Gdu4.js", "_app/immutable/chunks/scheduler.DTurKcvQ.js", "_app/immutable/entry/app.CGlvN2py.js", "_app/immutable/chunks/scheduler.DTurKcvQ.js", "_app/immutable/chunks/index.CvJRIlCB.js"], "stylesheets": [], "fonts": [], "uses_env_dynamic_public": false },
+      client: { "start": "_app/immutable/entry/start.DkMMgzNP.js", "app": "_app/immutable/entry/app.Bktqkfpa.js", "imports": ["_app/immutable/entry/start.DkMMgzNP.js", "_app/immutable/chunks/entry.ynT9Tddq.js", "_app/immutable/chunks/scheduler.DvBSSsau.js", "_app/immutable/entry/app.Bktqkfpa.js", "_app/immutable/chunks/scheduler.DvBSSsau.js", "_app/immutable/chunks/index.DFh_30bs.js"], "stylesheets": [], "fonts": [], "uses_env_dynamic_public": false },
       nodes: [
         __memo(() => Promise.resolve().then(() => (init__(), __exports))),
         __memo(() => Promise.resolve().then(() => (init__2(), __exports2))),
@@ -4916,35 +8114,35 @@ var prerendered = /* @__PURE__ */ new Set([]);
 var base_path = "";
 
 // .svelte-kit/cloudflare-tmp/_worker.js
-async function e(e3, t2) {
-  let n2 = "string" != typeof t2 && "HEAD" === t2.method;
-  n2 && (t2 = new Request(t2, { method: "GET" }));
-  let r3 = await e3.match(t2);
+async function e(e3, t22) {
+  let n2 = "string" != typeof t22 && "HEAD" === t22.method;
+  n2 && (t22 = new Request(t22, { method: "GET" }));
+  let r3 = await e3.match(t22);
   return n2 && r3 && (r3 = new Response(null, r3)), r3;
 }
-function t(e3, t2, n2, o2) {
-  return ("string" == typeof t2 || "GET" === t2.method) && r(n2) && (n2.headers.has("Set-Cookie") && (n2 = new Response(n2.body, n2)).headers.append("Cache-Control", "private=Set-Cookie"), o2.waitUntil(e3.put(t2, n2.clone()))), n2;
+function t2(e3, t22, n2, o22) {
+  return ("string" == typeof t22 || "GET" === t22.method) && r2(n2) && (n2.headers.has("Set-Cookie") && (n2 = new Response(n2.body, n2)).headers.append("Cache-Control", "private=Set-Cookie"), o22.waitUntil(e3.put(t22, n2.clone()))), n2;
 }
 var n = /* @__PURE__ */ new Set([200, 203, 204, 300, 301, 404, 405, 410, 414, 501]);
-function r(e3) {
+function r2(e3) {
   if (!n.has(e3.status)) return false;
   if (~(e3.headers.get("Vary") || "").indexOf("*")) return false;
-  let t2 = e3.headers.get("Cache-Control") || "";
-  return !/(private|no-cache|no-store)/i.test(t2);
+  let t22 = e3.headers.get("Cache-Control") || "";
+  return !/(private|no-cache|no-store)/i.test(t22);
 }
-function o(n2) {
-  return async function(r3, o2) {
-    let a = await e(n2, r3);
-    if (a) return a;
-    o2.defer((e3) => {
-      t(n2, r3, e3, o2);
+function o2(n2) {
+  return async function(r3, o22) {
+    let a2 = await e(n2, r3);
+    if (a2) return a2;
+    o22.defer((e3) => {
+      t2(n2, r3, e3, o22);
     });
   };
 }
 var s2 = caches.default;
-var c = t.bind(0, s2);
-var r2 = e.bind(0, s2);
-var e2 = o.bind(0, s2);
+var c2 = t2.bind(0, s2);
+var r22 = e.bind(0, s2);
+var e2 = o2.bind(0, s2);
 var server = new Server(manifest);
 var app_path = `/${manifest.appPath}`;
 var immutable = `${app_path}/immutable/`;
@@ -4953,7 +8151,7 @@ var worker = {
   async fetch(req, env, context) {
     await server.init({ env });
     let pragma = req.headers.get("cache-control") || "";
-    let res = !pragma.includes("no-cache") && await r2(req);
+    let res = !pragma.includes("no-cache") && await r22(req);
     if (res) return res;
     let { pathname, search } = new URL(req.url);
     try {
@@ -4987,7 +8185,7 @@ var worker = {
       });
     }
     pragma = res.headers.get("cache-control") || "";
-    return pragma && res.status < 400 ? c(req, res, context) : res;
+    return pragma && res.status < 400 ? c2(req, res, context) : res;
   }
 };
 var worker_default = worker;

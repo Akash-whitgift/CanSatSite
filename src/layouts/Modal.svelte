@@ -57,7 +57,7 @@
      <li>Altitude can be determined by combining data from a barometric pressure sensor, which measures atmospheric pressure changes with height, and a GPS module for precise positional data.</li>
     </ol>
   </section>
-  <p data-type='exit' class='interactable'>Created by Arjun</p>
+  <p data-type='video' class='interactable'>Created by Arjun</p>
     
       `,
       image: "Satellite Building.png"

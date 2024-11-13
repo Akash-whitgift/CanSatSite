@@ -7,10 +7,10 @@ function __memo(fn) {
 return {
 	appDir: "_app",
 	appPath: "_app",
-	assets: new Set(["Ad01.jpg","AiEmer.jpg","HTML.webp","Primechat.jpg","amazon.jpeg","amazon.jpg","d41586-024-02191-1_27293496.jpg","favicon.png"]),
-	mimeTypes: {".jpg":"image/jpeg",".webp":"image/webp",".jpeg":"image/jpeg",".png":"image/png"},
+	assets: new Set(["Ad01.jpg","AiEmer.jpg","Data Analysis.png","HTML.webp","Primechat.jpg","Satellite Building.png","Satellite Launch.jpeg","Uses of Satellites.jpg","amazon.jpeg","amazon.jpg","d41586-024-02191-1_27293496.jpg","favicon.png"]),
+	mimeTypes: {".jpg":"image/jpeg",".png":"image/png",".webp":"image/webp",".jpeg":"image/jpeg"},
 	_: {
-		client: {"start":"_app/immutable/entry/start.DwZE-IK4.js","app":"_app/immutable/entry/app.CGlvN2py.js","imports":["_app/immutable/entry/start.DwZE-IK4.js","_app/immutable/chunks/entry.Xyt3Gdu4.js","_app/immutable/chunks/scheduler.DTurKcvQ.js","_app/immutable/entry/app.CGlvN2py.js","_app/immutable/chunks/scheduler.DTurKcvQ.js","_app/immutable/chunks/index.CvJRIlCB.js"],"stylesheets":[],"fonts":[],"uses_env_dynamic_public":false},
+		client: {"start":"_app/immutable/entry/start.DkMMgzNP.js","app":"_app/immutable/entry/app.Bktqkfpa.js","imports":["_app/immutable/entry/start.DkMMgzNP.js","_app/immutable/chunks/entry.ynT9Tddq.js","_app/immutable/chunks/scheduler.DvBSSsau.js","_app/immutable/entry/app.Bktqkfpa.js","_app/immutable/chunks/scheduler.DvBSSsau.js","_app/immutable/chunks/index.DFh_30bs.js"],"stylesheets":[],"fonts":[],"uses_env_dynamic_public":false},
 		nodes: [
 			__memo(() => import('../output/server/nodes/0.js')),
 			__memo(() => import('../output/server/nodes/1.js')),
