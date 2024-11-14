@@ -105,6 +105,17 @@
      <p data-type='exit' class='interactable'>Created by Arjun</p>
       `,
       image: "Data Analysis.png"
+    },
+    modal6: {
+      title: 'About',
+      content: `
+      <section>
+      <h2>About us</h2>
+      <p>We are a team of four students from Whitgift School, who do not know what we are doing</p>
+    </section>
+     <p data-type='exit' class='interactable'>Created by Arjun</p>
+      `,
+      image: "Data Analysis.png"
     }
   };
 

@@ -235,6 +235,18 @@
   }
 </script>
 {#if showLoadingScreen}
+  <noscript>
+    <p>Please Enable Javascript to use this website</p>
+    <style>
+      noscript {
+        color: white;
+        font-size: 2.4em;
+      }
+      div {
+        display: none;
+      }
+    </style>
+  </noscript>
   <div id="loading-screen" class:isLoading={isLoading} on:transitionend={handleTransitionEnd}>
     Loading...
     <div id="progress-bar" style="width: {progress}%;"></div>
@@ -247,6 +259,10 @@
   {/if}
   
   <!-- Example Interactable Elements -->
+  <div class="image-container interactable" data-type="link" on:click={(event) => openModal('modal6', event)}>
+    <img class="image" src="/AiEmer.jpg" draggable="false" data-active />
+    <div class="text-overlay"><span>About</span></div>
+  </div>
   <div class="image-container interactable" data-type="link" on:click={(event) => openModal('modal1', event)}>
     <img class="image" src="/d41586-024-02191-1_27293496.jpg" draggable="false" data-active />
     <div class="text-overlay"><span>Engineering</span></div>
