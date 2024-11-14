@@ -111,7 +111,8 @@
       content: `
       <section>
       <h2>About us</h2>
-      <p>We are a team of four students from Whitgift School, who do not know what we are doing</p>
+      <p>We are a team of four students from Whitgift School. Our Team name is Helios, named after the greek god of the sun.</p>
+    <p>A lot of time went into choosing the name for our teams, and we ultimately chose this name because we felt that it represents the mission of delivering medicine to places well.</p>
     </section>
      <p data-type='exit' class='interactable'>Created by Arjun</p>
       `,
