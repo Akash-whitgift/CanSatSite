@@ -259,7 +259,7 @@
   
   <div class="image-container interactable" data-type="link" on:click={(event) => openModal('modal3', event)}>
     <img class="image" src="Uses of Satellites.jpg" draggable="false" data-active />
-    <div class="text-overlay"><span>Uses of Satellites</span></div>
+    <div class="text-overlay"><span>Uses of <br>Satellites</span></div>
   </div>
   
   <div class="image-container interactable" data-type="link" on:click={(event) => openModal('modal4', event)}>
