@@ -250,7 +250,6 @@ body {
 
   .modal-content {
     padding: 10px;
-    over
   }
 
   .close {
@@ -426,3 +425,15 @@ body {
   .fade-out {
     opacity: 0;
   }
+
+.social-link {
+  color: white;
+  text-decoration: underline;
+  font-size: 1.5em;
+  margin: 0.5em;
+  transition: color 0.3s ease;
+}
+.social-link:hover {
+  color: #ff4d00;
+  transition: color 0.3s ease;
+}

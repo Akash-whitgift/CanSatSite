@@ -116,10 +116,23 @@
     </section>
      <section>
      <h2>Our Socials</h2>
-     <p><a href="https://www.youtube.com/channel/UCyV5dPALG2pfV4r1SPtSfxA">Youtube: @Healios-CanSat</a></p>
-     <p><a href="#"> Instagram - </a></p>
-     <p><a href="#"> X (Formerly Twitter) - </a></p>
+     <p><a class="social-link interactable" data-type="link" href="https://www.youtube.com/channel/UCyV5dPALG2pfV4r1SPtSfxA" data-active>Youtube: @Healios-CanSat</a></p>
+     <p><a data-type="link" data-active class="social-link interactable" href="#"> Instagram - </a ></p>
+     <p><a data-type="link" data-active class="social-link interactable" href="#"> X (Formerly Twitter) - </a></p>
      </section>
+<style>
+     .social-link {
+       color: white;
+       text-decoration: underline;
+       font-size: 1.5em;
+       margin: 0.5em;
+       transition: color 0.3s ease;
+     }
+     .social-link:hover {
+       color: #ff4d00;
+       transition: color 0.3s ease;
+     }
+     </style>
       `,
       image: "Data Analysis.png"
     }
