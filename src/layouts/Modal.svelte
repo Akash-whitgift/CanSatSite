@@ -119,7 +119,7 @@
      <p><a href="https://www.youtube.com/channel/UCyV5dPALG2pfV4r1SPtSfxA">Youtube: @Healios-CanSat</a></p>
      <p><a href="#"> Instagram - </a></p>
      <p><a href="#"> X (Formerly Twitter) - </a></p>
-     
+     </section>
       `,
       image: "Data Analysis.png"
     }
