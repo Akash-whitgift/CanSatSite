@@ -114,7 +114,12 @@
       <p>We are a team of four students from Whitgift School. Our Team name is Healios, named after the greek god of the sun.</p>
     <p>A lot of time went into choosing the name for our teams, and we ultimately chose this name because we felt that it represents the mission of delivering medicine to places well.</p>
     </section>
-     <p data-type='exit' class='interactable'>Created by Arjun</p>
+     <section>
+     <h2>Our Socials</h2>
+     <p><a href="https://www.youtube.com/channel/UCyV5dPALG2pfV4r1SPtSfxA">Youtube: @Healios-CanSat</a></p>
+     <p><a href="#"> Instagram - </a></p>
+     <p><a href="#"> X (Formerly Twitter) - </a></p>
+     
       `,
       image: "Data Analysis.png"
     }
