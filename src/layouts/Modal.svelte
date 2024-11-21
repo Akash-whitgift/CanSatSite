@@ -116,7 +116,7 @@
     </section>
      <section>
      <h2>Our Socials</h2>
-     <p><a class="social-link interactable" data-type="link" href="https://www.youtube.com/channel/UCyV5dPALG2pfV4r1SPtSfxA" data-active>Youtube: @Healios-CanSat</a></p>
+     <p><a class="social-link interactable" data-type="link" href="https://www.youtube.com/@healioscansat" data-active>Youtube: @healioscansat</a></p>
      <p><a data-type="link" data-active class="social-link interactable" href="#"> Instagram - </a ></p>
      <p><a data-type="link" data-active class="social-link interactable" href="#"> X (Formerly Twitter) - </a></p>
      </section>
