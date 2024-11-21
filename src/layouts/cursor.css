@@ -78,3 +78,12 @@
     cursor: pointer; /* Use default touch behavior */
   }
 }
+@media (hover: none) and (pointer: coarse) {
+  #trailer {
+    display: none; /* Hide custom cursor on touch devices */
+  }
+
+  .interactable {
+    cursor: pointer; /* Use default touch behavior */
+  }
+}

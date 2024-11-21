@@ -15,6 +15,11 @@
   let isMouseDown = false;
   let initialMouseX = 0;
   let lastKnownPercentage = -10;
+  let scrollAmount = 15;
+  let animationDuration = 200; // Duration in milliseconds
+  let animationStartTime;
+  let startPercentage;
+  let targetPercentage;
   let dragSensitivity = 0.01;
   let scrollSensitivity = 0.2;
   let isMobile = false;
@@ -72,7 +77,35 @@
       updateTransform();
     }
   }
-  
+  function scrollLeft() {
+    startAnimation(Math.min(lastKnownPercentage + scrollAmount, -10));
+  }
+
+  function scrollRight() {
+    startAnimation(Math.max(lastKnownPercentage - scrollAmount, -100));
+  }
+  function startAnimation(target) {
+    startPercentage = lastKnownPercentage;
+    targetPercentage = target;
+    animationStartTime = performance.now();
+    requestAnimationFrame(animateScroll);
+  }
+
+  function animateScroll(currentTime) {
+    let elapsed = currentTime - animationStartTime;
+    let progress = Math.min(elapsed / animationDuration, 1);
+    // Easing function for smooth effect
+    let easeProgress = progress * (2 - progress);
+    lastKnownPercentage = startPercentage + (targetPercentage - startPercentage) * easeProgress;
+    updateTransform();
+    if (progress < 1) {
+      requestAnimationFrame(animateScroll);
+    } else {
+      lastKnownPercentage = targetPercentage;
+      updateTransform();
+    }
+  }
+
   function handleResize() {
     isMobile = window.innerWidth <= 600;
     if (isMobile) {
@@ -288,7 +321,10 @@
     <div class="text-overlay"><span>Data Analysis</span></div>
   </div>
 </div>
-
+<div class="scroll-buttons">
+  <button class="scroll-button left" on:click={scrollLeft}>←</button>
+  <button class="scroll-button right" on:click={scrollRight}>→</button>
+</div>
 <div id="trailer" data-type="">
   {#if trailerIcon}
     <FontAwesomeIcon id="trailer-icon" icon={trailerIcon} />
@@ -301,8 +337,33 @@
   .image-container {
     position: relative;
   }
+  .scroll-buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    
+  }
 
+  .scroll-button {
+    background-color: #111;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1.5em;
+    cursor: pointer;
+    margin: 0 10px;
+    border-radius: 6px;
+    color: #ff4d00
+  }
+
+  .scroll-button:hover {
+    background-color: #222;
+  }
   
+  @media (max-width: 600px) {
+    .scroll-buttons {
+      display: none;
+    }
+  }
 </style>
 
 {#if isModalOpen}
